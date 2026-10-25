@@ -1,0 +1,33 @@
+﻿# Secrets and environment files
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python environments and generated files
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+**/.pytest_cache/
+
+# Local databases
+**/envshare.db
+*.sqlite
+*.sqlite3
+
+# Frontend dependencies and build output
+**/node_modules/
+**/.next/
+**/out/
+**/dist/
+
+# Exclude the old frontend until it is needed
+/envshare-app/
+
+# Logs and operating-system files
+*.log
+.DS_Store
+Thumbs.db
