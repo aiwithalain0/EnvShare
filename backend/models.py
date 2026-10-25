@@ -126,6 +126,12 @@ class Variable(Base):
         DateTime(timezone=True), default=utc_now, onupdate=utc_now,
         nullable=False
     )
+    is_deleted: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None, nullable=True
+    )
 
     environment: Mapped["Environment"] = relationship(
         back_populates="variables"

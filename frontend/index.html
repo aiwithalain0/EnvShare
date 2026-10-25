@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EnvShare — Enterprise Environment Security & Secrets Management</title>
+  <meta name="description" content="Precision engineering environment variable and secret management for high-assurance development teams.">
+
+  <!-- Google Fonts: Inter, JetBrains Mono, Material Symbols Outlined -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+  <!-- Design System Tokens & Component Stylesheets -->
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+  <!-- Accessible Skip Link -->
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Mobile Drawer Backdrop -->
+  <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+  <!-- Unauthenticated Views Container (Login & Register) -->
+  <div id="auth-container" aria-live="polite"></div>
+
+  <!-- Authenticated Application Shell (Precision Engineering Canvas) -->
+  <div id="app-shell" class="app-shell" style="display: none;">
+
+    <!-- Left Sidebar Navigation Rail -->
+    <aside class="app-sidebar" id="app-sidebar" aria-label="Main Navigation">
+      <div>
+        <!-- Top Brand Header -->
+        <div class="sidebar-header">
+          <a href="#overview" class="brand-wrapper" aria-label="EnvShare Home">
+            <div class="brand-icon-box">
+              <span class="material-symbols-outlined" style="font-size: 18px;">lock_open</span>
+            </div>
+            <span class="brand-title">EnvShare</span>
+            <span class="brand-version-badge">v2.4</span>
+          </a>
+          <button id="sidebar-close-btn" class="sidebar-close-btn" aria-label="Close navigation menu">
+            <span class="material-symbols-outlined" style="font-size: 20px;">close</span>
+          </button>
+        </div>
+
+        <!-- Organization Context Switcher -->
+        <div class="org-switcher-card" title="Enterprise Tenant Context">
+          <div class="org-info">
+            <span class="material-symbols-outlined org-icon">domain</span>
+            <div class="org-text">
+              <div class="org-name">Acme Corp</div>
+              <div class="org-plan">ENTERPRISE TIER</div>
+            </div>
+          </div>
+          <span class="material-symbols-outlined" style="font-size: 16px; color: var(--color-text-muted);">unfold_more</span>
+        </div>
+
+        <!-- Navigation Section -->
+        <nav class="sidebar-nav">
+          <div class="nav-group">
+            <div class="nav-group-title">WORKSPACE</div>
+            <a href="#overview" class="nav-link is-active" data-nav-route="overview" id="nav-overview">
+              <span class="material-symbols-outlined">dashboard</span>
+              <span>Overview</span>
+            </a>
+            <a href="#projects" class="nav-link" data-nav-route="projects" id="nav-projects">
+              <span class="material-symbols-outlined">folder_open</span>
+              <span>Projects</span>
+            </a>
+            <a href="#variables" class="nav-link" data-nav-route="variables" id="nav-variables">
+              <span class="material-symbols-outlined">key</span>
+              <span>Variables</span>
+            </a>
+          </div>
+
+          <div class="nav-group" style="margin-top: var(--space-xs);">
+            <div class="nav-group-title">CONFIGURATION & OPS</div>
+            <a href="#import-export" class="nav-link" data-nav-route="import-export" id="nav-import-export">
+              <span class="material-symbols-outlined">sync_alt</span>
+              <span>Import / Export</span>
+            </a>
+            <a href="#team-members" class="nav-link" data-nav-route="team-members" id="nav-team-members">
+              <span class="material-symbols-outlined">group</span>
+              <span>Team Members</span>
+            </a>
+            <a href="#audit-logs" class="nav-link" data-nav-route="audit-logs" id="nav-audit-logs">
+              <span class="material-symbols-outlined">history</span>
+              <span>Audit Logs</span>
+            </a>
+            <a href="#settings" class="nav-link" data-nav-route="settings" id="nav-settings">
+              <span class="material-symbols-outlined">tune</span>
+              <span>Settings</span>
+            </a>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Sidebar Bottom Live Sync Status -->
+      <div class="sidebar-footer">
+        <div class="sync-status-box">
+          <div class="sync-status-header">
+            <span>KMS / AES-256 GCM</span>
+            <span class="sync-dot"></span>
+          </div>
+          <div class="sync-endpoint" id="backend-status-pill">Backend: Checking...</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Application Canvas -->
+    <div class="app-content">
+
+      <!-- Top Header Bar -->
+      <header class="app-header">
+        <div class="header-left">
+          <button id="mobile-menu-toggle" class="mobile-menu-btn" aria-label="Toggle navigation menu">
+            <span class="material-symbols-outlined" style="font-size: 22px;">menu</span>
+          </button>
+
+          <!-- Breadcrumb Scope Selector -->
+          <div class="header-scope" id="header-scope-selector">
+            <div class="scope-pill" id="scope-pill-btn" title="Current Project Context">
+              <span class="scope-org">Acme Corp</span>
+              <span class="scope-sep">/</span>
+              <span class="scope-project" id="header-current-project-name">Loading...</span>
+              <span class="material-symbols-outlined scope-chevron">expand_more</span>
+            </div>
+            <span class="env-tag-pill dev" id="header-current-env-tag">
+              <span class="badge-dot" style="background-color: var(--color-dev);"></span>
+              <span id="header-current-env-name">Development</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Quick Search -->
+          <div class="header-search">
+            <span class="material-symbols-outlined" style="font-size: 16px;">search</span>
+            <input id="header-quick-search" type="text" placeholder="Search variables, keys... (⌘K)" aria-label="Search variables and keys">
+          </div>
+
+          <!-- Primary Header Action -->
+          <button id="header-quick-action-btn" type="button" class="btn btn-primary btn-sm">
+            <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+            <span id="header-quick-action-text">New Project</span>
+          </button>
+
+          <!-- User Profile Pill & Dropdown -->
+          <div class="user-profile-widget" id="user-profile-widget" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
+            <div class="user-avatar-circle" id="user-avatar-initials">AU</div>
+            <div class="user-info-text">
+              <div class="user-name-line">
+                <span class="user-name" id="user-display-name">Engineer</span>
+                <span class="user-role-badge">ADMIN</span>
+              </div>
+              <span class="user-email" id="user-email-display">user@acme.corp</span>
+            </div>
+            <button id="btn-quick-logout" type="button" class="btn btn-ghost btn-sm btn-icon" title="Log out safely" style="margin-left: var(--space-xs);">
+              <span class="material-symbols-outlined" style="font-size: 16px; color: var(--color-text-secondary);">logout</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Work Surface -->
+      <main id="main-content" class="app-main" tabindex="-1">
+        <!-- Active View Mounts Here Dynamically -->
+      </main>
+    </div>
+  </div>
+
+  <!-- Global Accessible Modal Backdrop -->
+  <div id="global-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-modal-title" aria-hidden="true" style="display: none;">
+    <div class="modal-container" id="global-modal-container">
+      <div class="modal-header">
+        <h3 id="global-modal-title" class="font-headline-sm" style="margin: 0; color: var(--color-text-primary);">Dialog Title</h3>
+        <button id="global-modal-close-btn" class="modal-close-btn" type="button" aria-label="Close dialog">
+          <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+        </button>
+      </div>
+      <div class="modal-body" id="global-modal-body">
+        <!-- Modal body content injected dynamically -->
+      </div>
+      <div class="modal-footer" id="global-modal-footer">
+        <!-- Modal action buttons injected dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Accessible Toast Notification Container -->
+  <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Application Bootstrap Module -->
+  <script type="module">
+    import { store } from './js/store.js';
+    import { router } from './js/router.js';
+    window.store = store;
+    window.router = router;
+    import { checkBackendHealth, listProjects, createProject, createEnvironment, listEnvironments } from './js/api.js';
+    import { renderLoginView, renderRegisterView } from './js/auth.js';
+    import { renderOverviewView } from './js/views/overview.js';
+    import { renderProjectsView } from './js/views/projects.js';
+    import { renderVariablesView } from './js/views/variables.js';
+    import { renderImportExportView } from './js/views/importExport.js';
+    import { renderTeamMembersView } from './js/views/teamMembers.js';
+    import { renderAuditLogsView } from './js/views/auditLogs.js';
+    import { renderSettingsView } from './js/views/settings.js';
+
+    // DOM Elements
+    const authContainer = document.getElementById('auth-container');
+    const appShell = document.getElementById('app-shell');
+    const mainContent = document.getElementById('main-content');
+    const userEmailDisplay = document.getElementById('user-email-display');
+    const userDisplayName = document.getElementById('user-display-name');
+    const userAvatarInitials = document.getElementById('user-avatar-initials');
+    const headerProjectName = document.getElementById('header-current-project-name');
+    const headerEnvTag = document.getElementById('header-current-env-tag');
+    const headerEnvName = document.getElementById('header-current-env-name');
+    const quickLogoutBtn = document.getElementById('btn-quick-logout');
+    const quickActionBtn = document.getElementById('header-quick-action-btn');
+    const quickActionText = document.getElementById('header-quick-action-text');
+
+    // ─────────────────────────────────────────────────────────────
+    // 1. Toast Notification Primitive
+    // ─────────────────────────────────────────────────────────────
+    window.showToast = function(title, message, type = 'info', durationMs = 4000) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+      const icons = {
+        success: '<span class="material-symbols-outlined" style="color: var(--color-prod); font-size: 20px;">check_circle</span>',
+        error: '<span class="material-symbols-outlined" style="color: var(--color-error); font-size: 20px;">error</span>',
+        warning: '<span class="material-symbols-outlined" style="color: var(--color-stg); font-size: 20px;">warning</span>',
+        info: '<span class="material-symbols-outlined" style="color: var(--color-primary); font-size: 20px;">info</span>',
+      };
+
+      toast.innerHTML = `
+        <div class="toast-icon">${icons[type] || icons.info}</div>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" type="button" aria-label="Dismiss notification">
+          <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
+        </button>
+      `;
+
+      const closeBtn = toast.querySelector('.toast-close');
+      const dismiss = () => {
+        toast.classList.add('is-hiding');
+        setTimeout(() => toast.remove(), 200);
+      };
+
+      closeBtn.addEventListener('click', dismiss);
+      container.appendChild(toast);
+
+      if (durationMs > 0) {
+        setTimeout(dismiss, durationMs);
+      }
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // 2. Global Accessible Modal Dialog Controller
+    // ─────────────────────────────────────────────────────────────
+    const globalModalBackdrop = document.getElementById('global-modal-backdrop');
+    const globalModalTitle = document.getElementById('global-modal-title');
+    const globalModalBody = document.getElementById('global-modal-body');
+    const globalModalFooter = document.getElementById('global-modal-footer');
+    const globalModalCloseBtn = document.getElementById('global-modal-close-btn');
+    let previousActiveElement = null;
+
+    window.openGlobalModal = function(options = {}) {
+      previousActiveElement = document.activeElement;
+      if (options.title) globalModalTitle.textContent = options.title;
+      if (options.bodyHtml) globalModalBody.innerHTML = options.bodyHtml;
+      if (options.footerHtml) globalModalFooter.innerHTML = options.footerHtml;
+
+      globalModalBackdrop.style.display = 'flex';
+      globalModalBackdrop.classList.add('is-open');
+      globalModalBackdrop.setAttribute('aria-hidden', 'false');
+
+      // Autofocus first interactive element
+      const firstInput = globalModalBody.querySelector('input, select, textarea, button:not([disabled])');
+      if (firstInput) {
+        setTimeout(() => firstInput.focus(), 50);
+      }
+
+      document.addEventListener('keydown', handleModalKeyDown);
+    };
+
+    window.closeGlobalModal = function() {
+      globalModalBackdrop.classList.remove('is-open');
+      globalModalBackdrop.style.display = 'none';
+      globalModalBackdrop.setAttribute('aria-hidden', 'true');
+      document.removeEventListener('keydown', handleModalKeyDown);
+      if (previousActiveElement) previousActiveElement.focus();
+    };
+
+    function handleModalKeyDown(e) {
+      if (e.key === 'Escape') {
+        window.closeGlobalModal();
+      }
+    }
+
+    globalModalBackdrop.addEventListener('click', (e) => {
+      if (e.target === globalModalBackdrop) window.closeGlobalModal();
+    });
+
+    globalModalCloseBtn.addEventListener('click', window.closeGlobalModal);
+
+    // ─────────────────────────────────────────────────────────────
+    // 3. New Project Modal Global Action
+    // ─────────────────────────────────────────────────────────────
+    window.openNewProjectModal = function() {
+      window.openGlobalModal({
+        title: 'Register New Project',
+        bodyHtml: `
+          <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <p class="font-body-sm" style="color: var(--color-text-secondary); margin: 0;">
+              Create an isolated cryptographic vault for your application. Standard environments (Dev, Staging, Prod) will be provisioned automatically.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label class="form-label" for="modal-project-name">Project Identifier (slug)</label>
+              <input id="modal-project-name" class="input-control font-mono" type="text" placeholder="e.g. payment-service" required>
+              <div class="form-label-desc">Unique alphanumeric name used in CLI and audit streams.</div>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label class="form-label" for="modal-project-desc">Description</label>
+              <input id="modal-project-desc" class="input-control" type="text" placeholder="e.g. Core checkout and Stripe webhook processor">
+            </div>
+          </div>
+        `,
+        footerHtml: `
+          <button type="button" class="btn btn-secondary" onclick="window.closeGlobalModal()">Cancel</button>
+          <button id="modal-project-submit" type="button" class="btn btn-primary">
+            <span>Create Project</span>
+          </button>
+        `
+      });
+
+      const handleEnterSubmit = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('modal-project-submit')?.click();
+        }
+      };
+      document.getElementById('modal-project-name')?.addEventListener('keydown', handleEnterSubmit);
+      document.getElementById('modal-project-desc')?.addEventListener('keydown', handleEnterSubmit);
+
+      document.getElementById('modal-project-submit').addEventListener('click', async () => {
+        const nameInput = document.getElementById('modal-project-name');
+        const descInput = document.getElementById('modal-project-desc');
+        const name = nameInput.value.trim();
+        const desc = descInput.value.trim();
+
+        if (!name) {
+          nameInput.focus();
+          window.showToast('Validation Error', 'Project name is required.', 'error');
+          return;
+        }
+
+        const submitBtn = document.getElementById('modal-project-submit');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Creating...';
+
+        try {
+          // 1. Create project via backend API
+          const newProj = await createProject({ name, description: desc });
+
+          // 2. Automatically initialize standard environments
+          try {
+            await createEnvironment(newProj.id, 'Development');
+            await createEnvironment(newProj.id, 'Staging');
+            await createEnvironment(newProj.id, 'Production');
+          } catch (envErr) {
+            console.warn('Environment auto-provision notice:', envErr);
+          }
+
+          window.closeGlobalModal();
+          window.showToast('Project Created', `Project "${name}" was created successfully.`, 'success');
+
+          // Switch active context and navigate to variables view
+          window.selectProjectAndNavigate(newProj.id, newProj.name, 'variables');
+
+        } catch (err) {
+          window.showToast('Creation Failed', err.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>Create Project</span>';
+        }
+      });
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // 4. Project Selection and Navigation Helper
+    // ─────────────────────────────────────────────────────────────
+    window.selectProjectAndNavigate = async function(projectId, projectName, targetRoute = 'variables') {
+      // 1. Ensure selected project is set in the store BEFORE environments are fetched
+      store.setCurrentProject({ id: projectId, name: projectName });
+      updateHeaderScope();
+
+      try {
+        const envs = await listEnvironments(projectId);
+        const defaultEnv = envs.find(e => e.name.toLowerCase() === 'development') || envs[0] || null;
+
+        store.setCurrentProject({
+          id: projectId,
+          name: projectName,
+          environments: envs,
+          activeEnvironment: defaultEnv
+        });
+
+        updateHeaderScope();
+        router.navigate(targetRoute);
+      } catch (err) {
+        window.showToast('Error', 'Could not load environments: ' + err.message, 'error');
+      }
+    };
+
+    function updateHeaderScope() {
+      const proj = store.getCurrentProject();
+      if (proj) {
+        headerProjectName.textContent = proj.name;
+        const activeEnv = proj.activeEnvironment || store.getActiveEnvironment();
+        if (activeEnv) {
+          headerEnvName.textContent = activeEnv.name;
+          const envLow = activeEnv.name.toLowerCase();
+          headerEnvTag.className = `env-tag-pill ${envLow.includes('prod') ? 'prod' : envLow.includes('stag') ? 'stg' : 'dev'}`;
+        } else {
+          headerEnvName.textContent = 'None';
+          headerEnvTag.className = 'env-tag-pill dev';
+        }
+      } else {
+        headerProjectName.textContent = 'Select Project';
+        headerEnvName.textContent = 'None';
+        headerEnvTag.className = 'env-tag-pill dev';
+      }
+    }
+
+    store.subscribe('activeProject', () => updateHeaderScope());
+    store.subscribe('activeEnvironment', () => updateHeaderScope());
+
+    // Header Quick Action button adapts to current route
+    function updateHeaderQuickAction(route) {
+      if (route === 'variables') {
+        quickActionText.textContent = 'Add Variable';
+        quickActionBtn.onclick = () => window.openAddVariableDialog?.();
+      } else if (route === 'import-export') {
+        quickActionText.textContent = 'New Project';
+        quickActionBtn.onclick = () => window.openNewProjectModal();
+      } else {
+        quickActionText.textContent = 'New Project';
+        quickActionBtn.onclick = () => window.openNewProjectModal();
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // 5. Mobile Drawer & Keyboard Shortcuts
+    // ─────────────────────────────────────────────────────────────
+    const mobileToggle = document.getElementById('mobile-menu-toggle');
+    const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+    const sidebar = document.getElementById('app-sidebar');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+
+    const toggleSidebar = () => {
+      sidebar.classList.toggle('is-open');
+      sidebarBackdrop.classList.toggle('is-open');
+    };
+
+    mobileToggle?.addEventListener('click', toggleSidebar);
+    sidebarCloseBtn?.addEventListener('click', toggleSidebar);
+    sidebarBackdrop?.addEventListener('click', toggleSidebar);
+
+    // Close mobile drawer on route link click
+    document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1023) {
+          sidebar.classList.remove('is-open');
+          sidebarBackdrop.classList.remove('is-open');
+        }
+      });
+    });
+
+    // ⌘K Quick Search Shortcut
+    window.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('header-quick-search');
+        if (searchInput) searchInput.focus();
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 6. Logout Handler (In-memory token clearance)
+    // ─────────────────────────────────────────────────────────────
+    quickLogoutBtn.addEventListener('click', () => {
+      store.clearAuth();
+      window.showToast('Logged Out', 'Your session token was securely purged from memory.', 'info');
+      router.navigate('login');
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 7. Store Auth Listener: Synchronize UI with In-Memory State
+    // ─────────────────────────────────────────────────────────────
+    store.subscribe('auth', (auth) => {
+      if (auth.isAuthenticated) {
+        authContainer.style.display = 'none';
+        authContainer.innerHTML = '';
+        appShell.style.display = 'flex';
+
+        const email = auth.user?.email || 'engineer@acme.corp';
+        userEmailDisplay.textContent = email;
+        const namePart = email.split('@')[0];
+        userDisplayName.textContent = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        userAvatarInitials.textContent = namePart.slice(0, 2).toUpperCase();
+
+        updateHeaderScope();
+      } else {
+        appShell.style.display = 'none';
+        authContainer.style.display = 'block';
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 8. Router Route Registrations
+    // ─────────────────────────────────────────────────────────────
+    router.register('login', {
+      requiresAuth: false,
+      handler: () => {
+        renderLoginView(authContainer);
+      }
+    });
+
+    router.register('register', {
+      requiresAuth: false,
+      handler: () => {
+        renderRegisterView(authContainer);
+      }
+    });
+
+    router.register('overview', {
+      requiresAuth: true,
+      handler: () => {
+        updateHeaderQuickAction('overview');
+        renderOverviewView(mainContent);
+      }
+    });
+
+    router.register('projects', {
+      requiresAuth: true,
+      handler: () => {
+        updateHeaderQuickAction('projects');
+        renderProjectsView(mainContent);
+      }
+    });
+
+    router.register('variables', {
+      requiresAuth: true,
+      handler: () => {
+        updateHeaderQuickAction('variables');
+        renderVariablesView(mainContent);
+      }
+    });
+
+    router.register('import-export', {
+      requiresAuth: true,
+      handler: () => {
+        updateHeaderQuickAction('import-export');
+        renderImportExportView(mainContent);
+      }
+    });
+
+    router.register('team-members', {
+      requiresAuth: true,
+      handler: () => {
+        updateHeaderQuickAction('team-members');
+        renderTeamMembersView(mainContent);
+      }
+    });
+
+    router.register('audit-logs', {
+      requiresAuth: true,
+      handler: () => {
+        updateHeaderQuickAction('audit-logs');
+        renderAuditLogsView(mainContent);
+      }
+    });
+
+    router.register('settings', {
+      requiresAuth: true,
+      handler: () => {
+        updateHeaderQuickAction('settings');
+        renderSettingsView(mainContent);
+      }
+    });
+
+    // ─────────────────────────────────────────────────────────────
+    // 9. Startup Initialization & Backend Verification
+    // ─────────────────────────────────────────────────────────────
+    async function initApp() {
+      // Initialize router
+      router.init(store.isAuthenticated() ? 'overview' : 'login');
+
+      // Verify backend health
+      const statusPill = document.getElementById('backend-status-pill');
+      try {
+        const res = await checkBackendHealth();
+        if (res && res.status === 'healthy') {
+          statusPill.innerHTML = 'Backend: <strong style="color: var(--color-prod);">Online (Port 8000)</strong>';
+        } else {
+          statusPill.innerHTML = 'Backend: <strong style="color: var(--color-stg);">Degraded</strong>';
+        }
+      } catch (err) {
+        statusPill.innerHTML = 'Backend: <strong style="color: var(--color-error);">Offline</strong>';
+      }
+    }
+
+    initApp();
+  </script>
+</body>
+</html>

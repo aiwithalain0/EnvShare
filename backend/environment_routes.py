@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from dependencies import get_current_user
 from models import AuditEvent, Environment, Project, ProjectMember, User
+from roles import require_project_role, ROLES_READ, ROLES_WRITE
 
 
 router = APIRouter(
@@ -86,6 +87,9 @@ def create_environment(
         current_user.id,
         db,
     )
+    # Ensure user has write permission on the project
+
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
 
     existing_environment = db.scalar(
         select(Environment).where(
@@ -145,6 +149,9 @@ def list_environments(
         db,
     )
 
+    
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_READ)
+
     statement = (
         select(Environment)
         .where(Environment.project_id == project_id)
@@ -152,3 +159,4 @@ def list_environments(
     )
 
     return list(db.scalars(statement).all())
+

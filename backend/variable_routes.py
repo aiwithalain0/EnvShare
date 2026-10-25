@@ -1,4 +1,4 @@
-from datetime import datetime
+﻿from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
@@ -18,6 +18,7 @@ from models import (
     Variable,
     VariableVersion,
 )
+from roles import require_project_role, ROLES_READ, ROLES_WRITE, ROLES_ADMIN
 from schemas import VariableCreate
 
 
@@ -98,6 +99,7 @@ def get_variable(
         select(Variable).where(
             Variable.id == variable_id,
             Variable.environment_id == environment_id,
+            Variable.is_deleted.is_(False),
         )
     )
 
@@ -122,6 +124,8 @@ def create_variable(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Ensure write permission for creating variables
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -134,21 +138,28 @@ def create_variable(
     )
 
     if existing:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A variable with this key already exists.",
-        )
+        if not existing.is_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A variable with this key already exists.",
+            )
 
-    variable = Variable(
-        environment_id=environment.id,
-        key=variable_data.key,
-        value_ciphertext=encrypt_value(variable_data.value),
-        is_sensitive=variable_data.is_sensitive,
-        created_by=current_user.id,
-    )
+        variable = existing
+        variable.is_deleted = False
+        variable.deleted_at = None
+        variable.value_ciphertext = encrypt_value(variable_data.value)
+        variable.is_sensitive = variable_data.is_sensitive
+    else:
+        variable = Variable(
+            environment_id=environment.id,
+            key=variable_data.key,
+            value_ciphertext=encrypt_value(variable_data.value),
+            is_sensitive=variable_data.is_sensitive,
+            created_by=current_user.id,
+        )
+        db.add(variable)
 
     try:
-        db.add(variable)
         db.flush()
 
         db.add(
@@ -193,13 +204,18 @@ def list_variables(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Ensure read permission for listing variables
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_READ)
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
 
     statement = (
         select(Variable)
-        .where(Variable.environment_id == environment.id)
+        .where(
+            Variable.environment_id == environment.id,
+            Variable.is_deleted.is_(False),
+        )
         .order_by(Variable.id.asc())
     )
 
@@ -215,6 +231,8 @@ def update_variable(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Ensure write permission for updating variables
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -272,6 +290,9 @@ def reveal_variable(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_READ
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -323,6 +344,9 @@ def delete_variable(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_ADMIN
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -344,11 +368,8 @@ def delete_variable(
             )
         )
 
-        db.query(VariableVersion).filter(
-            VariableVersion.variable_id == variable.id
-        ).delete(synchronize_session=False)
-
-        db.delete(variable)
+        variable.is_deleted = True
+        variable.deleted_at = datetime.now(timezone.utc)
         db.commit()
 
     except SQLAlchemyError:
@@ -369,6 +390,9 @@ def get_variable_history(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_READ
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -399,6 +423,8 @@ def preview_env_import(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Ensure write permission for previewing import
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -412,26 +438,42 @@ def preview_env_import(
             "variables": [],
         }
 
-    existing_keys = set(
+    active_keys = set(
         db.scalars(
             select(Variable.key).where(
-                Variable.environment_id == environment.id
+                Variable.environment_id == environment.id,
+                Variable.is_deleted.is_(False),
             )
         ).all()
     )
 
-    preview = [
-        {
-            "key": item["key"],
-            "status": (
-                "already_exists"
-                if item["key"] in existing_keys
-                else "new"
-            ),
-            "is_sensitive": True,
-        }
-        for item in parsed["variables"]
-    ]
+    deleted_keys = set(
+        db.scalars(
+            select(Variable.key).where(
+                Variable.environment_id == environment.id,
+                Variable.is_deleted.is_(True),
+            )
+        ).all()
+    )
+
+    preview = []
+    for item in parsed["variables"]:
+        key = item["key"]
+        if key in active_keys:
+            status_val = "already_exists"
+        elif key in deleted_keys:
+            status_val = "can_restore"
+        else:
+            status_val = "new"
+
+        preview.append(
+            {
+                "key": key,
+                "status": status_val,
+                "can_restore": key in deleted_keys,
+                "is_sensitive": True,
+            }
+        )
 
     return {
         "valid": True,
@@ -444,6 +486,9 @@ def preview_env_import(
         "existing_count": sum(
             item["status"] == "already_exists" for item in preview
         ),
+        "restore_count": sum(
+            item["status"] == "can_restore" for item in preview
+        ),
     }
 
 
@@ -455,6 +500,8 @@ def import_env_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Ensure write permission for importing variables
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -491,16 +538,17 @@ def import_env_file(
             detail="The import contains duplicate variable keys.",
         )
 
-    existing_keys = set(
+    active_conflicting_keys = set(
         db.scalars(
             select(Variable.key).where(
                 Variable.environment_id == environment.id,
                 Variable.key.in_(incoming_keys),
+                Variable.is_deleted.is_(False),
             )
         ).all()
     )
 
-    if existing_keys:
+    if active_conflicting_keys:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
@@ -508,25 +556,44 @@ def import_env_file(
                     "Some variables already exist. Nothing was imported; "
                     "remove or rename the conflicting keys and retry."
                 ),
-                "conflicting_keys": sorted(existing_keys),
+                "conflicting_keys": sorted(active_conflicting_keys),
             },
         )
+
+    deleted_variables_by_key = {
+        var.key: var
+        for var in db.scalars(
+            select(Variable).where(
+                Variable.environment_id == environment.id,
+                Variable.key.in_(incoming_keys),
+                Variable.is_deleted.is_(True),
+            )
+        ).all()
+    }
 
     created_variables = []
 
     try:
         for item in parsed["variables"]:
+            key = item["key"]
             ciphertext = encrypt_value(item["value"])
 
-            variable = Variable(
-                environment_id=environment.id,
-                key=item["key"],
-                value_ciphertext=ciphertext,
-                is_sensitive=True,
-                created_by=current_user.id,
-            )
-            db.add(variable)
-            db.flush()
+            if key in deleted_variables_by_key:
+                variable = deleted_variables_by_key[key]
+                variable.is_deleted = False
+                variable.deleted_at = None
+                variable.value_ciphertext = ciphertext
+                variable.is_sensitive = True
+            else:
+                variable = Variable(
+                    environment_id=environment.id,
+                    key=key,
+                    value_ciphertext=ciphertext,
+                    is_sensitive=True,
+                    created_by=current_user.id,
+                )
+                db.add(variable)
+                db.flush()
 
             db.add(
                 VariableVersion(
@@ -587,3 +654,4 @@ def import_env_file(
             for key in created_variables
         ],
     }
+

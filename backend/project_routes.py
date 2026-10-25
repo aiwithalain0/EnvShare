@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from dependencies import get_current_user
 from models import AuditEvent, Project, ProjectMember, User
+from roles import require_project_role, ROLES_ADMIN
 
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -136,6 +137,8 @@ def get_project_audit_logs(
             detail="Project not found.",
         )
 
+    # Ensure the user has admin privileges for audit logs
+    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_ADMIN)
     statement = (
         select(AuditEvent)
         .where(AuditEvent.project_id == project_id)

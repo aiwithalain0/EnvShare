@@ -7,7 +7,16 @@ from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
 from main import app
-from models import AuditEvent, Environment, Project, ProjectMember, User, Variable
+from models import (
+    AuditEvent,
+    Environment,
+    Project,
+    ProjectMember,
+    User,
+    Variable,
+    VariableVersion,
+)
+
 
 
 @pytest.fixture
@@ -228,3 +237,133 @@ def test_non_member_cannot_read_variables(client):
     response = client.get(variable_url(project_id, environment_id))
 
     assert response.status_code == 404
+
+
+def test_recreating_soft_deleted_variable_reactivates_record_and_preserves_history(client):
+    project_id, environment_id = setup_environment(client)
+    url = variable_url(project_id, environment_id)
+
+    # 1. Create a variable
+    secret_v1 = "fake-secret-v1"
+    created = client.post(
+        url,
+        json={
+            "key": "REACTIVATED_KEY",
+            "value": secret_v1,
+            "is_sensitive": True,
+        },
+    )
+    assert created.status_code == 201
+    original_id = created.json()["id"]
+
+    # 2. Soft-delete the variable
+    delete_res = client.delete(f"{url}/{original_id}")
+    assert delete_res.status_code == 204
+
+    # 3. Verify it is excluded from listing and secrets are not leaked
+    listing_after_delete = client.get(url)
+    assert listing_after_delete.status_code == 200
+    assert all(item["id"] != original_id for item in listing_after_delete.json())
+    assert secret_v1 not in listing_after_delete.text
+
+    # 4. Recreate the variable with the same key and new value
+    secret_v2 = "fake-secret-v2"
+    recreated = client.post(
+        url,
+        json={
+            "key": "REACTIVATED_KEY",
+            "value": secret_v2,
+            "is_sensitive": True,
+        },
+    )
+    assert recreated.status_code == 201
+    recreated_data = recreated.json()
+    assert recreated_data["id"] == original_id  # Reactivated existing record
+    assert recreated_data["key"] == "REACTIVATED_KEY"
+    assert "value" not in recreated_data
+    assert secret_v2 not in recreated.text
+
+    # 5. Normal listing returns reactivated variable without secrets
+    listing_after_recreate = client.get(url)
+    assert listing_after_recreate.status_code == 200
+    listed_items = listing_after_recreate.json()
+    assert any(
+        item["id"] == original_id and item["key"] == "REACTIVATED_KEY"
+        for item in listed_items
+    )
+    assert secret_v1 not in listing_after_recreate.text
+    assert secret_v2 not in listing_after_recreate.text
+
+    # 6. Reveal returns the new value
+    reveal = client.get(f"{url}/{original_id}/reveal")
+    assert reveal.status_code == 200
+    assert reveal.json() == {
+        "key": "REACTIVATED_KEY",
+        "value": secret_v2,
+    }
+
+    # 7. History preserves both versions without returning secret plaintext
+    history = client.get(f"{url}/{original_id}/history")
+    assert history.status_code == 200
+    versions_data = history.json()
+    assert len(versions_data) == 2
+    assert secret_v1 not in history.text
+    assert secret_v2 not in history.text
+
+    # 8. Direct database inspection: is_deleted is False, deleted_at is None, encrypted ciphertext
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        var = db.get(Variable, original_id)
+        assert var is not None
+        assert var.is_deleted is False
+        assert var.deleted_at is None
+        assert var.value_ciphertext != secret_v2
+        assert secret_v2 not in var.value_ciphertext
+
+        versions = db.scalars(
+            select(VariableVersion).where(
+                VariableVersion.variable_id == original_id
+            ).order_by(VariableVersion.id.asc())
+        ).all()
+        assert len(versions) == 2
+
+        # Verify audit events do not contain secrets
+        events = db.scalars(
+            select(AuditEvent).where(
+                AuditEvent.project_id == project_id,
+                AuditEvent.resource_id == original_id,
+            )
+        ).all()
+        assert len(events) >= 3  # created, deleted, created (reactivated)
+        for event in events:
+            assert secret_v1 not in str(event.event_metadata)
+            assert secret_v2 not in str(event.event_metadata)
+    finally:
+        db.close()
+
+
+def test_recreating_active_variable_returns_conflict(client):
+    project_id, environment_id = setup_environment(client)
+    url = variable_url(project_id, environment_id)
+
+    res1 = client.post(
+        url,
+        json={
+            "key": "ACTIVE_CONFLICT_KEY",
+            "value": "fake-val-1",
+            "is_sensitive": True,
+        },
+    )
+    assert res1.status_code == 201
+
+    res2 = client.post(
+        url,
+        json={
+            "key": "ACTIVE_CONFLICT_KEY",
+            "value": "fake-val-2",
+            "is_sensitive": True,
+        },
+    )
+    assert res2.status_code == 409
+    assert "already exists" in res2.json()["detail"]
+
