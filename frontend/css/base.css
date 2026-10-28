@@ -77,6 +77,29 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Stitch alias helpers used in view templates */
+.type-h3, .font-h3 {
+  font-size: 20px;
+  line-height: 28px;
+  letter-spacing: -0.015em;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+}
+
+.type-body-sm {
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-body-sm);
+  color: var(--color-text-secondary);
+}
+
+.type-caption {
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-caption);
+  color: var(--color-text-secondary);
+}
+
+.font-mono { font-family: var(--font-mono); }
+
 .font-headline-md, h2, h3.font-headline-md {
   font-size: var(--font-size-headline-md);
   line-height: var(--line-height-headline-md);

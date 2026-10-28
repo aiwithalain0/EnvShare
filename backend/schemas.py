@@ -98,3 +98,54 @@ class VariableResponse(BaseModel):
 class VariableRevealResponse(BaseModel):
     key: str
     value: str
+
+
+class InviteCodeCreate(BaseModel):
+    role: str = "member"
+    max_uses: int = Field(default=1, ge=1, le=1000)
+    expires_in_days: int = Field(default=7, ge=1, le=365)
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value not in {"member", "manager"}:
+            raise ValueError("Invite role must be either 'member' or 'manager'.")
+        return value
+
+
+class InviteCodeResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    code: str
+    role: str
+    max_uses: int
+    uses_count: int
+    is_revoked: bool
+    expires_at: datetime | None
+    created_at: datetime
+
+
+class JoinProjectRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=64)
+
+    @field_validator("code")
+    @classmethod
+    def validate_code(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Invite code cannot be empty.")
+        return value
+
+
+class ProjectMemberResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    user_id: int
+    email: str
+    role: str
+    created_at: datetime

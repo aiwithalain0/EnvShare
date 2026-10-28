@@ -6,10 +6,10 @@
   <title>EnvShare — Enterprise Environment Security & Secrets Management</title>
   <meta name="description" content="Precision engineering environment variable and secret management for high-assurance development teams.">
 
-  <!-- Google Fonts: Inter, JetBrains Mono, Material Symbols Outlined -->
+  <!-- Google Fonts: Geist, Geist Mono, Inter, JetBrains Mono, Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
 
   <!-- Design System Tokens & Component Stylesheets -->
@@ -34,81 +34,62 @@
     <!-- Left Sidebar Navigation Rail -->
     <aside class="app-sidebar" id="app-sidebar" aria-label="Main Navigation">
       <div>
-        <!-- Top Brand Header -->
+      <!-- Top Brand Header -->
         <div class="sidebar-header">
           <a href="#overview" class="brand-wrapper" aria-label="EnvShare Home">
             <div class="brand-icon-box">
-              <span class="material-symbols-outlined" style="font-size: 18px;">lock_open</span>
+              <span class="material-symbols-outlined" style="font-size: 16px;">lock</span>
             </div>
             <span class="brand-title">EnvShare</span>
-            <span class="brand-version-badge">v2.4</span>
           </a>
           <button id="sidebar-close-btn" class="sidebar-close-btn" aria-label="Close navigation menu">
             <span class="material-symbols-outlined" style="font-size: 20px;">close</span>
           </button>
         </div>
 
-        <!-- Organization Context Switcher -->
-        <div class="org-switcher-card" title="Enterprise Tenant Context">
-          <div class="org-info">
-            <span class="material-symbols-outlined org-icon">domain</span>
-            <div class="org-text">
-              <div class="org-name">Acme Corp</div>
-              <div class="org-plan">ENTERPRISE TIER</div>
-            </div>
-          </div>
-          <span class="material-symbols-outlined" style="font-size: 16px; color: var(--color-text-muted);">unfold_more</span>
-        </div>
-
-        <!-- Navigation Section -->
-        <nav class="sidebar-nav">
-          <div class="nav-group">
-            <div class="nav-group-title">WORKSPACE</div>
-            <a href="#overview" class="nav-link is-active" data-nav-route="overview" id="nav-overview">
-              <span class="material-symbols-outlined">dashboard</span>
-              <span>Overview</span>
-            </a>
-            <a href="#projects" class="nav-link" data-nav-route="projects" id="nav-projects">
-              <span class="material-symbols-outlined">folder_open</span>
-              <span>Projects</span>
-            </a>
-            <a href="#variables" class="nav-link" data-nav-route="variables" id="nav-variables">
-              <span class="material-symbols-outlined">key</span>
-              <span>Variables</span>
-            </a>
-          </div>
-
-          <div class="nav-group" style="margin-top: var(--space-xs);">
-            <div class="nav-group-title">CONFIGURATION & OPS</div>
-            <a href="#import-export" class="nav-link" data-nav-route="import-export" id="nav-import-export">
-              <span class="material-symbols-outlined">sync_alt</span>
-              <span>Import / Export</span>
-            </a>
-            <a href="#team-members" class="nav-link" data-nav-route="team-members" id="nav-team-members">
-              <span class="material-symbols-outlined">group</span>
-              <span>Team Members</span>
-            </a>
-            <a href="#audit-logs" class="nav-link" data-nav-route="audit-logs" id="nav-audit-logs">
-              <span class="material-symbols-outlined">history</span>
-              <span>Audit Logs</span>
-            </a>
-            <a href="#settings" class="nav-link" data-nav-route="settings" id="nav-settings">
-              <span class="material-symbols-outlined">tune</span>
-              <span>Settings</span>
-            </a>
-          </div>
+        <!-- Navigation -->
+        <nav class="sidebar-nav" style="padding: 12px;">
+          <a href="#overview" class="nav-link" data-nav-route="overview" id="nav-overview">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>Overview</span>
+          </a>
+          <a href="#projects" class="nav-link" data-nav-route="projects" id="nav-projects">
+            <span class="material-symbols-outlined">folder_open</span>
+            <span>Projects</span>
+          </a>
+          <a href="#variables" class="nav-link" data-nav-route="variables" id="nav-variables">
+            <span class="material-symbols-outlined">key</span>
+            <span>Variables</span>
+          </a>
+          <a href="#import-export" class="nav-link" data-nav-route="import-export" id="nav-import-export">
+            <span class="material-symbols-outlined">sync_alt</span>
+            <span>Import / Export</span>
+          </a>
+          <a href="#team-members" class="nav-link" data-nav-route="team-members" id="nav-team-members">
+            <span class="material-symbols-outlined">group</span>
+            <span>Team Members</span>
+          </a>
+          <a href="#audit-logs" class="nav-link" data-nav-route="audit-logs" id="nav-audit-logs">
+            <span class="material-symbols-outlined">receipt_long</span>
+            <span>Audit Logs</span>
+          </a>
+          <a href="#settings" class="nav-link" data-nav-route="settings" id="nav-settings">
+            <span class="material-symbols-outlined">settings</span>
+            <span>Settings</span>
+          </a>
         </nav>
       </div>
 
-      <!-- Sidebar Bottom Live Sync Status -->
-      <div class="sidebar-footer">
-        <div class="sync-status-box">
-          <div class="sync-status-header">
-            <span>KMS / AES-256 GCM</span>
-            <span class="sync-dot"></span>
-          </div>
-          <div class="sync-endpoint" id="backend-status-pill">Backend: Checking...</div>
+      <!-- Sidebar Bottom: User Profile -->
+      <div class="sidebar-user-area" id="sidebar-user-area">
+        <div id="user-avatar-circle-sidebar" class="user-avatar-circle" style="width:32px;height:32px;font-size:11px;flex-shrink:0;">ES</div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-name" id="sidebar-user-name">User</span>
+          <span class="sidebar-user-email" id="sidebar-user-email">Signed in</span>
         </div>
+        <button id="btn-sidebar-logout" type="button" class="btn-icon" title="Log out" aria-label="Log out" style="color:var(--color-text-muted);">
+          <span class="material-symbols-outlined" style="font-size:18px;">logout</span>
+        </button>
       </div>
     </aside>
 
@@ -124,12 +105,11 @@
 
           <!-- Breadcrumb Scope Selector -->
           <div class="header-scope" id="header-scope-selector">
-            <div class="scope-pill" id="scope-pill-btn" title="Current Project Context">
-              <span class="scope-org">Acme Corp</span>
+            <a href="#projects" class="scope-pill" id="scope-pill-btn" title="View Projects" style="text-decoration: none; color: inherit;">
+              <span class="scope-org">EnvShare</span>
               <span class="scope-sep">/</span>
-              <span class="scope-project" id="header-current-project-name">Loading...</span>
-              <span class="material-symbols-outlined scope-chevron">expand_more</span>
-            </div>
+              <span class="scope-project" id="header-current-project-name">Select Project</span>
+            </a>
             <span class="env-tag-pill dev" id="header-current-env-tag">
               <span class="badge-dot" style="background-color: var(--color-dev);"></span>
               <span id="header-current-env-name">Development</span>
@@ -150,15 +130,15 @@
             <span id="header-quick-action-text">New Project</span>
           </button>
 
-          <!-- User Profile Pill & Dropdown -->
-          <div class="user-profile-widget" id="user-profile-widget" tabindex="0" role="button" aria-haspopup="true" aria-expanded="false">
-            <div class="user-avatar-circle" id="user-avatar-initials">AU</div>
+          <!-- User Profile Pill -->
+          <div class="user-profile-widget" id="user-profile-widget" tabindex="0">
+            <div class="user-avatar-circle" id="user-avatar-initials">ES</div>
             <div class="user-info-text">
               <div class="user-name-line">
-                <span class="user-name" id="user-display-name">Engineer</span>
+                <span class="user-name" id="user-display-name">User</span>
                 <span class="user-role-badge">ADMIN</span>
               </div>
-              <span class="user-email" id="user-email-display">user@acme.corp</span>
+              <span class="user-email" id="user-email-display">Signed in</span>
             </div>
             <button id="btn-quick-logout" type="button" class="btn btn-ghost btn-sm btn-icon" title="Log out safely" style="margin-left: var(--space-xs);">
               <span class="material-symbols-outlined" style="font-size: 16px; color: var(--color-text-secondary);">logout</span>
@@ -199,9 +179,7 @@
   <script type="module">
     import { store } from './js/store.js';
     import { router } from './js/router.js';
-    window.store = store;
-    window.router = router;
-    import { checkBackendHealth, listProjects, createProject, createEnvironment, listEnvironments } from './js/api.js';
+    import { checkBackendHealth, listProjects, createProject, createEnvironment, listEnvironments, joinProjectWithCode } from './js/api.js';
     import { renderLoginView, renderRegisterView } from './js/auth.js';
     import { renderOverviewView } from './js/views/overview.js';
     import { renderProjectsView } from './js/views/projects.js';
@@ -210,6 +188,9 @@
     import { renderTeamMembersView } from './js/views/teamMembers.js';
     import { renderAuditLogsView } from './js/views/auditLogs.js';
     import { renderSettingsView } from './js/views/settings.js';
+
+    window.store = store;
+    window.router = router;
 
     // DOM Elements
     const authContainer = document.getElementById('auth-container');
@@ -399,6 +380,114 @@
     };
 
     // ─────────────────────────────────────────────────────────────
+    // 3b. Join Project via Invite Code Modal
+    // ─────────────────────────────────────────────────────────────
+    window.openJoinProjectModal = function() {
+      window.openGlobalModal({
+        title: 'Join Project with Code',
+        bodyHtml: `
+          <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <p class="font-body-sm" style="color: var(--color-text-secondary); margin: 0; line-height: 1.5;">
+              Enter the unique invite code provided by the project administrator (e.g. <code>ENV-XXXX-XXXX</code>).
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <label class="form-label" for="modal-join-code">Project Invite Code</label>
+              <input id="modal-join-code" class="input-control font-mono" type="text" placeholder="ENV-XXXX-XXXX" style="text-transform: uppercase;" required>
+              <div class="form-label-desc">No email confirmation required. Enter code to join instantly.</div>
+            </div>
+            <div id="modal-join-error" style="display: none; padding: 0.625rem; border-radius: var(--radius-md); background: rgba(239, 68, 68, 0.1); border: 1px solid var(--color-error); color: var(--color-error); font-size: 13px;"></div>
+          </div>
+        `,
+        footerHtml: `
+          <button type="button" class="btn btn-secondary" onclick="window.closeGlobalModal()">Cancel</button>
+          <button id="modal-join-submit" type="button" class="btn btn-primary" style="background-color: #09090b; color: #fff;">
+            <span class="material-symbols-outlined" style="font-size: 16px;">login</span>
+            <span>Join Project</span>
+          </button>
+        `
+      });
+
+      const codeInput = document.getElementById('modal-join-code');
+      const errorEl = document.getElementById('modal-join-error');
+      const submitBtn = document.getElementById('modal-join-submit');
+
+      const handleJoin = async () => {
+        const code = codeInput.value.trim().toUpperCase();
+        if (!code) {
+          errorEl.textContent = 'Please enter an invite code.';
+          errorEl.style.display = 'block';
+          codeInput.focus();
+          return;
+        }
+
+        errorEl.style.display = 'none';
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner"></span> Joining...';
+
+        try {
+          const joinedProj = await joinProjectWithCode(code);
+          window.closeGlobalModal();
+          window.showToast('Joined Successfully', `You have joined "${joinedProj.name}".`, 'success');
+
+          // Switch context to joined project
+          await window.selectProjectAndNavigate(joinedProj.id, joinedProj.name, 'variables');
+        } catch (err) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span class="material-symbols-outlined" style="font-size: 16px;">login</span><span>Join Project</span>';
+          errorEl.textContent = err.message || 'Could not join project with this code.';
+          errorEl.style.display = 'block';
+        }
+      };
+
+      codeInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleJoin();
+        }
+      });
+
+      submitBtn?.addEventListener('click', handleJoin);
+    };
+
+    // ─────────────────────────────────────────────────────────────
+    // 3c. Generic Accessible Confirmation Dialog
+    // ─────────────────────────────────────────────────────────────
+    window.openConfirmationModal = function({ title, message, confirmText = 'Delete', isDanger = true, onConfirm }) {
+      const confirmBg = isDanger ? 'var(--color-error)' : '#09090b';
+      window.openGlobalModal({
+        title: title || 'Confirm Action',
+        bodyHtml: `
+          <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <p class="font-body-sm" style="color: var(--color-text-primary); margin: 0; line-height: 1.5;">
+              ${message}
+            </p>
+          </div>
+        `,
+        footerHtml: `
+          <button type="button" class="btn btn-secondary" onclick="window.closeGlobalModal()">Cancel</button>
+          <button id="modal-confirm-action-btn" type="button" class="btn btn-primary" style="background-color: ${confirmBg}; color: #fff;">
+            <span>${confirmText}</span>
+          </button>
+        `
+      });
+
+      document.getElementById('modal-confirm-action-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('modal-confirm-action-btn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Processing...';
+        try {
+          await onConfirm();
+          window.closeGlobalModal();
+        } catch (err) {
+          btn.disabled = false;
+          btn.textContent = confirmText;
+          window.showToast('Action Failed', err.message, 'error');
+        }
+      });
+    };
+
+
+    // ─────────────────────────────────────────────────────────────
     // 4. Project Selection and Navigation Helper
     // ─────────────────────────────────────────────────────────────
     window.selectProjectAndNavigate = async function(projectId, projectName, targetRoute = 'variables') {
@@ -500,7 +589,14 @@
     // ─────────────────────────────────────────────────────────────
     // 6. Logout Handler (In-memory token clearance)
     // ─────────────────────────────────────────────────────────────
-    quickLogoutBtn.addEventListener('click', () => {
+    quickLogoutBtn?.addEventListener('click', () => {
+      store.clearAuth();
+      window.showToast('Logged Out', 'Your session token was securely purged from memory.', 'info');
+      router.navigate('login');
+    });
+
+    // Sidebar logout button
+    document.getElementById('btn-sidebar-logout')?.addEventListener('click', () => {
       store.clearAuth();
       window.showToast('Logged Out', 'Your session token was securely purged from memory.', 'info');
       router.navigate('login');
@@ -518,8 +614,18 @@
         const email = auth.user?.email || 'engineer@acme.corp';
         userEmailDisplay.textContent = email;
         const namePart = email.split('@')[0];
-        userDisplayName.textContent = namePart.charAt(0).toUpperCase() + namePart.slice(1);
-        userAvatarInitials.textContent = namePart.slice(0, 2).toUpperCase();
+        const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+        const initials = namePart.slice(0, 2).toUpperCase();
+        userDisplayName.textContent = displayName;
+        userAvatarInitials.textContent = initials;
+
+        // Update sidebar user area
+        const sidebarName = document.getElementById('sidebar-user-name');
+        const sidebarEmail = document.getElementById('sidebar-user-email');
+        const sidebarAvatar = document.getElementById('user-avatar-circle-sidebar');
+        if (sidebarName) sidebarName.textContent = displayName;
+        if (sidebarEmail) sidebarEmail.textContent = email;
+        if (sidebarAvatar) sidebarAvatar.textContent = initials;
 
         updateHeaderScope();
       } else {
@@ -609,16 +715,11 @@
       router.init(store.isAuthenticated() ? 'overview' : 'login');
 
       // Verify backend health
-      const statusPill = document.getElementById('backend-status-pill');
       try {
         const res = await checkBackendHealth();
-        if (res && res.status === 'healthy') {
-          statusPill.innerHTML = 'Backend: <strong style="color: var(--color-prod);">Online (Port 8000)</strong>';
-        } else {
-          statusPill.innerHTML = 'Backend: <strong style="color: var(--color-stg);">Degraded</strong>';
-        }
+        window.__backendHealth = res;
       } catch (err) {
-        statusPill.innerHTML = 'Backend: <strong style="color: var(--color-error);">Offline</strong>';
+        window.__backendHealth = { status: 'offline', error: err.message };
       }
     }
 

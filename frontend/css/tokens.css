@@ -1,135 +1,137 @@
 /**
- * EnvShare Design Tokens — Precision Engineering Canvas (Light Theme)
- * Extracted from Google Stitch Project 7000277523774803089
+ * EnvShare Design Tokens — Precision Cryptographic Minimal
+ * Aligned with Stitch DESIGN.md + all exported screen designs
  */
 
 :root {
-  /* ── Canvas & Surface Tiers (Stitch Light Mode) ── */
-  --color-canvas:                 #FAF8FF; /* Primary background canvas */
-  --color-surface:                #FAF8FF; /* Main view surface */
-  --color-surface-container-lowest: #FFFFFF; /* High-contrast white cards, tables, modals */
-  --color-surface-container-low:  #F2F3FF; /* Input backgrounds, sub-panels, table headers */
-  --color-surface-container:      #EBEDFF; /* Secondary tags, hover backgrounds, separators */
-  --color-surface-container-high: #E5E7FA; /* Nav active items, elevated controls */
-  --color-surface-container-highest:#DFE1F4; /* Chips, toggles */
+  /* ── Canvas & Surface Tiers (Stitch Precision Minimal) ── */
+  --color-canvas:                   #FAFAFA;
+  --color-surface:                  #FAFAFA;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-surface-container-low:    #F4F4F5;
+  --color-surface-container:        #E4E4E7;
+  --color-surface-container-high:   #D4D4D8;
+  --color-surface-container-highest:#A1A1AA;
 
   /* ── Text & Typography Hierarchy ── */
-  --color-text-primary:           #171B28; /* Primary titles, table rows, active labels */
-  --color-text-secondary:         #4C5F7D; /* Subtitles, column headers, meta timestamps */
-  --color-text-muted:             #75777E; /* Placeholder text, inactive toggles */
-  --color-inverse:                #FAF8FF; /* Inverse text on dark badges/buttons */
+  --color-text-primary:             #09090B;
+  --color-text-secondary:           #71717A;
+  --color-text-muted:               #A1A1AA;
+  --color-inverse:                  #FFFFFF;
 
-  /* ── Primary Action Colors (Midnight Navy & Slate) ── */
-  --color-primary:                #1A2742; /* Main branding, dark accents, primary text */
-  --color-primary-hover:          #0F172A;
-  --color-primary-container:      #303D59; /* Primary action button background */
-  --color-primary-container-hover:#1A2742;
-  --color-on-primary:             #FFFFFF; /* White button text */
-  --color-on-primary-container:   #9BA8C9;
+  /* ── Primary Action Colors (Carbon Black) ── */
+  --color-primary:                  #09090B;
+  --color-primary-hover:            #27272A;
+  --color-primary-container:        #09090B;
+  --color-primary-container-hover:  #27272A;
+  --color-on-primary:               #FFFFFF;
+  --color-on-primary-container:     #FFFFFF;
 
   /* ── Secondary & Surface Controls ── */
-  --color-secondary:              #4C5F7D;
-  --color-secondary-container:    #C7DBFE;
-  --color-on-secondary-container: #1E3A8A;
+  --color-secondary:                #71717A;
+  --color-secondary-container:      #F4F4F5;
+  --color-on-secondary-container:   #09090B;
 
   /* ── Outlines & Subtle Borders ── */
-  --color-border:                 #DCE3EF; /* Precision 1px outline for cards, tables */
-  --color-border-subtle:          #E5E7FA; /* Table row dividers, inner borders */
-  --color-border-strong:          #C5C6CE; /* Focused input borders */
+  --color-border:                   #E4E4E7;
+  --color-border-subtle:            #F4F4F5;
+  --color-border-strong:            #D4D4D8;
 
   /* ── Operational Signal Accents ── */
-  /* Production & Cryptographic Integrity (Emerald) */
-  --color-prod:                   #10B981;
-  --color-prod-bg:                #ECFDF5;
-  --color-prod-text:              #065F46;
-  --color-prod-border:            #A7F3D0;
+  /* Production / Cryptographic Integrity (Emerald) */
+  --color-prod:                     #10B981;
+  --color-prod-bg:                  #ECFDF5;
+  --color-prod-text:                #047857;
+  --color-prod-border:              #A7F3D0;
 
-  /* Staging & Drift Warnings (Amber) */
-  --color-stg:                    #F59E0B;
-  --color-stg-bg:                 #FFFBEB;
-  --color-stg-text:               #92400E;
-  --color-stg-border:             #FDE68A;
+  /* Staging / Drift Warnings (Amber) */
+  --color-stg:                      #F59E0B;
+  --color-stg-bg:                   #FFFBEB;
+  --color-stg-text:                 #B45309;
+  --color-stg-border:               #FDE68A;
 
-  /* Dev & Scope References (Sky / Indigo) */
-  --color-dev:                    #38BDF8;
-  --color-dev-bg:                 #F0F9FF;
-  --color-dev-text:               #0369A1;
-  --color-dev-border:             #BAE6FD;
+  /* Dev & Scope References (Blue) */
+  --color-dev:                      #3B82F6;
+  --color-dev-bg:                   #EFF6FF;
+  --color-dev-text:                 #1D4ED8;
+  --color-dev-border:               #BFDBFE;
 
-  --color-indigo:                 #6366F1;
-  --color-indigo-bg:              #EEF2FF;
-  --color-indigo-text:            #4338CA;
-  --color-indigo-border:          #C7D2FE;
+  --color-indigo:                   #6366F1;
+  --color-indigo-bg:                #EEF2FF;
+  --color-indigo-text:              #4338CA;
+  --color-indigo-border:            #C7D2FE;
 
-  /* Critical & Destructive (Rose / Crimson) */
-  --color-error:                  #EF4444;
-  --color-error-bg:               #FEF2F2;
-  --color-error-text:             #991B1B;
-  --color-error-border:           #FECACA;
+  /* Critical / Destructive (Crimson) */
+  --color-error:                    #EF4444;
+  --color-error-bg:                 #FEF2F2;
+  --color-error-text:               #B91C1C;
+  --color-error-border:             #FCA5A5;
 
   /* ── Focus Rings ── */
-  --focus-ring:                   0 0 0 2px #38BDF8;
-  --focus-ring-danger:            0 0 0 2px #EF4444;
+  --focus-ring:                     0 0 0 2px #09090B;
+  --focus-ring-danger:              0 0 0 2px #EF4444;
 
   /* ── Typography Stacks ── */
-  --font-sans:                    "Inter", "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono:                    "JetBrains Mono", Consolas, "SFMono-Regular", monospace;
+  --font-sans:   "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono:   "JetBrains Mono", "Geist Mono", Consolas, "SFMono-Regular", monospace;
 
   /* ── Type Scale & Line Heights ── */
-  --font-size-display-lg:         32px;  --line-height-display-lg: 40px;  --letter-spacing-display: -0.02em;
-  --font-size-headline-lg:        24px;  --line-height-headline-lg: 32px; --letter-spacing-h-lg:   -0.015em;
-  --font-size-headline-md:        20px;  --line-height-headline-md: 28px; --letter-spacing-h-md:   -0.01em;
-  --font-size-headline-sm:        16px;  --line-height-headline-sm: 24px; --letter-spacing-h-sm:   -0.005em;
-  --font-size-body-lg:            16px;  --line-height-body-lg:    24px;
-  --font-size-body-md:            14px;  --line-height-body-md:    20px;
-  --font-size-body-sm:            13px;  --line-height-body-sm:    18px;
-  --font-size-label-ui:           12px;  --line-height-label-ui:   16px;  --letter-spacing-label:  0.02em;
-  --font-size-code-md:            13px;  --line-height-code-md:    18px;
-  --font-size-code-sm:            11px;  --line-height-code-sm:    16px;
+  --font-size-display-lg:           36px;  --line-height-display-lg: 44px;  --letter-spacing-display: -0.025em;
+  --font-size-headline-lg:          24px;  --line-height-headline-lg: 32px; --letter-spacing-h-lg:    -0.02em;
+  --font-size-headline-md:          18px;  --line-height-headline-md: 26px; --letter-spacing-h-md:    -0.015em;
+  --font-size-headline-sm:          16px;  --line-height-headline-sm: 24px; --letter-spacing-h-sm:    -0.01em;
+  --font-size-body-lg:              16px;  --line-height-body-lg:     24px;
+  --font-size-body-md:              14px;  --line-height-body-md:     20px;
+  --font-size-body-sm:              13px;  --line-height-body-sm:     18px;
+  --font-size-caption:              12px;  --line-height-caption:     16px;
+  --font-size-label-ui:             12px;  --line-height-label-ui:    16px;  --letter-spacing-label: 0.06em;
+  --font-size-code-md:              13px;  --line-height-code-md:     18px;
+  --font-size-code-sm:              11px;  --line-height-code-sm:     16px;
 
   /* ── Font Weights ── */
-  --font-weight-regular:          400;
-  --font-weight-medium:           500;
-  --font-weight-semibold:         600;
-  --font-weight-bold:             700;
+  --font-weight-regular:            400;
+  --font-weight-medium:             500;
+  --font-weight-semibold:           600;
+  --font-weight-bold:               700;
 
   /* ── Spacing Scale ── */
-  --space-xs:                     4px;
-  --space-sm:                     8px;
-  --space-md:                     12px;
-  --space-lg:                     16px;
-  --space-xl:                     24px;
-  --space-2xl:                    32px;
-  --space-3xl:                    48px;
+  --space-xs:                       4px;
+  --space-sm:                       8px;
+  --space-md:                       12px;
+  --space-lg:                       16px;
+  --space-xl:                       24px;
+  --space-2xl:                      32px;
+  --space-3xl:                      48px;
 
-  /* ── Border Radii (Stitch Soft Geometric Form Factor) ── */
-  --radius-xs:                    2px;
-  --radius-sm:                    4px;
-  --radius-md:                    6px;
-  --radius-lg:                    8px;
-  --radius-xl:                    12px;
-  --radius-full:                  9999px;
+  /* ── Border Radii (Stitch Geometric) ── */
+  --radius-xs:                      2px;
+  --radius-sm:                      4px;
+  --radius-md:                      6px;
+  --radius-lg:                      8px;
+  --radius-xl:                      12px;
+  --radius-full:                    9999px;
 
   /* ── Non-Diffused Structural Shadows ── */
-  --shadow-xs:                    0 1px 2px rgba(17, 21, 34, 0.04);
-  --shadow-sm:                    0 1px 3px rgba(17, 21, 34, 0.05), 0 1px 2px rgba(17, 21, 34, 0.03);
-  --shadow-md:                    0 4px 12px -2px rgba(17, 21, 34, 0.08);
-  --shadow-lg:                    0 12px 24px -4px rgba(17, 21, 34, 0.12);
-  --shadow-dialog:                0 20px 30px -6px rgba(17, 21, 34, 0.16), 0 8px 12px -4px rgba(17, 21, 34, 0.08);
+  --shadow-xs:                      0 1px 2px rgba(9, 9, 11, 0.04);
+  --shadow-sm:                      0 1px 3px rgba(9, 9, 11, 0.05), 0 1px 2px rgba(9, 9, 11, 0.03);
+  --shadow-md:                      0 4px 12px -2px rgba(9, 9, 11, 0.08);
+  --shadow-lg:                      0 12px 24px -4px rgba(9, 9, 11, 0.12);
+  --shadow-dialog:                  0 8px 24px rgba(9, 9, 11, 0.06), 0 2px 4px rgba(9, 9, 11, 0.02);
+  --shadow-auth:                    0 1px 3px rgba(0,0,0,0.05), 0 10px 25px -5px rgba(0,0,0,0.04);
 
   /* ── Layout Dimensions ── */
-  --sidebar-width:                256px;
-  --header-height:                56px;
-  --content-max-width:            1380px;
+  --sidebar-width:                  256px;
+  --header-height:                  56px;
+  --content-max-width:              1280px;
 
   /* ── Transitions ── */
-  --transition-fast:              150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal:            200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast:                150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal:              200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
-    --transition-fast: 0ms;
+    --transition-fast:  0ms;
     --transition-normal: 0ms;
   }
 }

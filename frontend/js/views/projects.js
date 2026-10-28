@@ -1,151 +1,87 @@
 /**
  * EnvShare Project Management View
- * Extracted from Google Stitch Project 7000277523774803089
+ * Aligned with Google Stitch design (envshare_projects_1 variant)
  */
 
 import { store } from '../store.js';
-import { listProjects, listEnvironments, createProject } from '../api.js';
+import { listProjects, listEnvironments, createProject, deleteProject } from '../api.js';
 
 export async function renderProjectsView(container) {
   const state = store.getState();
 
   container.innerHTML = `
-    <!-- Header Section -->
-    <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
-      <div style="display: flex; items-center; gap: var(--space-sm); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);">
-        <span>Acme Corp</span>
-        <span style="color: var(--color-text-muted);">/</span>
-        <span style="color: var(--color-text-primary);">Infrastructure Workspaces</span>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-md);">
-        <div>
-          <h1 class="font-display-lg">Projects</h1>
-          <p class="font-body-md" style="color: var(--color-text-secondary); max-width: 680px; margin-top: 2px;">
-            Manage organization repositories, linked environments, and project-level administrative settings.
-          </p>
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Header Section -->
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--color-text-secondary); letter-spacing: 0.05em;">
+          <span>Workspace</span>
+          <span>/</span>
+          <span>Projects</span>
         </div>
-        <div style="display: flex; align-items: center; gap: var(--space-sm);">
-          <button id="btn-audit-rollup" class="btn btn-secondary" type="button">
-            <span class="material-symbols-outlined" style="font-size: 16px; color: var(--color-text-secondary);">analytics</span>
-            <span>Audit Rollup</span>
-          </button>
-          <button id="btn-create-project-trigger" class="btn btn-primary" type="button">
-            <span class="material-symbols-outlined">add</span>
-            <span>Create Project</span>
-          </button>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
+          <div>
+            <h1 class="font-headline-lg" style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-text-primary);">Projects</h1>
+            <p class="font-body-sm" style="margin-top: 4px; color: var(--color-text-secondary); max-width: 680px;">
+              Manage projects, environments, and configuration secrets across your workspace.
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button id="btn-join-project-trigger" class="btn btn-secondary" type="button" style="height: 36px; padding: 0 14px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">login</span>
+              <span>Join Project</span>
+            </button>
+            <button id="btn-create-project-trigger" class="btn btn-primary" type="button" style="height: 36px; padding: 0 14px; background-color: #09090b; color: #fff; border-radius: var(--radius-md); font-size: 13px; font-weight: 500;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+              <span>Create Project</span>
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 4 Summary Metric Cards -->
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">Total Workspaces</span>
-          <span class="material-symbols-outlined" style="color: var(--color-text-secondary); font-size: 18px;">domain</span>
-        </div>
-        <div>
-          <span class="metric-number" id="projects-metric-total">-</span>
-          <span class="metric-unit">repos</span>
-        </div>
-        <div class="metric-subtext">Across active clusters</div>
       </div>
 
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">Secured Secrets</span>
-          <span class="material-symbols-outlined" style="color: var(--color-text-secondary); font-size: 18px;">key</span>
-        </div>
-        <div>
-          <span class="metric-number">412</span>
-          <span class="metric-unit">synced</span>
-        </div>
-        <div class="metric-subtext">AES-GCM 256-bit encrypted</div>
-      </div>
+      <!-- Main Projects Surface Card -->
+      <div class="table-surface-card" style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); background-color: var(--color-surface-container-lowest); overflow: hidden;">
+        <!-- Toolbar -->
+        <div style="padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--color-border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; background-color: var(--color-surface-container-lowest);">
+          <div style="display: flex; flex: 1; align-items: center; gap: 0.75rem; max-width: 420px;">
+            <div style="position: relative; width: 100%;">
+              <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 8px; font-size: 16px; color: var(--color-text-muted);">search</span>
+              <input id="projects-search-input" type="text" class="input-control" placeholder="Search projects..." style="padding-left: 32px; height: 32px; font-size: 13px; border-radius: var(--radius-md);">
+            </div>
+          </div>
 
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">Environment Drift</span>
-          <span class="material-symbols-outlined" style="color: var(--color-text-secondary); font-size: 18px;">sync_saved_locally</span>
-        </div>
-        <div>
-          <span class="metric-number">0.0%</span>
-        </div>
-        <div class="metric-subtext">All deployment tiers matched</div>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">Active Collaborators</span>
-          <span class="material-symbols-outlined" style="color: var(--color-text-secondary); font-size: 18px;">group</span>
-        </div>
-        <div>
-          <span class="metric-number">8</span>
-          <span class="metric-unit">members</span>
-        </div>
-        <div class="metric-subtext">Zero-trust access policy</div>
-      </div>
-    </div>
-
-    <!-- Main Projects Surface Card -->
-    <div class="table-surface-card">
-      <div class="table-toolbar">
-        <div style="display: flex; flex: 1; align-items: center; gap: var(--space-sm); max-width: 460px;">
-          <div style="position: relative; width: 100%;">
-            <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 10px; font-size: 18px; color: var(--color-text-muted);">search</span>
-            <input id="projects-search-input" type="text" class="input-control" placeholder="Filter by repository, slug or tag..." style="padding-left: 36px;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="font-size: 12px; color: var(--color-text-secondary);">
+              <span id="projects-metric-total" style="font-weight: 600; color: var(--color-text-primary);">-</span> active projects
+            </div>
+            <button id="projects-refresh-btn" class="btn btn-secondary btn-icon" title="Reload list" style="height: 32px; width: 32px;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+            </button>
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: var(--space-md);">
-          <div class="filter-chip-group">
-            <button class="filter-chip is-active" data-filter="all">All</button>
-            <button class="filter-chip" data-filter="active">Active</button>
-            <button class="filter-chip" data-filter="archived">Archived</button>
+        <!-- Projects Rows List (Stitch Article Card Design) -->
+        <div id="projects-table-body" style="display: flex; flex-direction: column; divide-y: divide-neutral-100;">
+          <div style="text-align: center; padding: 3rem 1rem;">
+            <div class="spinner"></div>
+            <div style="margin-top: 0.5rem; color: var(--color-text-secondary); font-size: 13px;">Loading projects...</div>
           </div>
-          <button id="projects-refresh-btn" class="btn btn-secondary btn-icon" title="Reload list" style="height: 34px; width: 34px;">
-            <span class="material-symbols-outlined">refresh</span>
-          </button>
         </div>
-      </div>
 
-      <!-- Desktop Projects Table -->
-      <div class="table-wrapper data-table-desktop">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Repository & Identity</th>
-              <th>Connected Environments</th>
-              <th>Team Access</th>
-              <th>Created / Updated</th>
-              <th style="text-align: right;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="projects-table-body">
-            <tr>
-              <td colspan="5" style="text-align: center; padding: var(--space-xl);">
-                <div class="spinner"></div>
-                <div style="margin-top: var(--space-xs); color: var(--color-text-secondary);">Loading projects...</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mobile Stacked Card List -->
-      <div class="mobile-card-list" id="projects-mobile-card-list">
-        <!-- Populated via JS -->
+        <!-- Mobile Stacked Card List -->
+        <div class="mobile-card-list" id="projects-mobile-card-list" style="display: none;">
+          <!-- Handled responsively via projects-table-body -->
+        </div>
       </div>
     </div>
   `;
 
   // Hook Actions
-  document.getElementById('btn-audit-rollup')?.addEventListener('click', () => {
-    window.location.hash = '#audit-logs';
-  });
-
   document.getElementById('btn-create-project-trigger')?.addEventListener('click', () => {
     window.openNewProjectModal?.();
+  });
+
+  document.getElementById('btn-join-project-trigger')?.addEventListener('click', () => {
+    window.openJoinProjectModal?.();
   });
 
   let currentProjects = [];
@@ -155,120 +91,121 @@ export async function renderProjectsView(container) {
       currentProjects = await listProjects();
       store.setProjects(currentProjects);
 
-      document.getElementById('projects-metric-total').textContent = currentProjects.length;
+      const metricTotal = document.getElementById('projects-metric-total');
+      if (metricTotal) metricTotal.textContent = currentProjects.length;
+
       renderTableRows(currentProjects);
     } catch (err) {
-      document.getElementById('projects-table-body').innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: var(--space-xl); color: var(--color-error);">
+      const containerEl = document.getElementById('projects-table-body');
+      if (containerEl) {
+        containerEl.innerHTML = `
+          <div style="text-align: center; padding: 2rem; color: var(--color-error); font-size: 13px;">
             Failed to load projects: ${err.message}
-          </td>
-        </tr>
-      `;
+          </div>
+        `;
+      }
     }
   }
 
-  function renderTableRows(projects) {
-    const tbody = document.getElementById('projects-table-body');
-    const mobileList = document.getElementById('projects-mobile-card-list');
+  window.confirmDeleteProject = function(projectId, projectName) {
+    window.openConfirmationModal?.({
+      title: 'Delete Project',
+      message: `Are you sure you want to permanently delete <strong>${escapeHtml(projectName)}</strong>? All associated environments, encrypted variables, and memberships will be deleted. Audit history will be retained.`,
+      confirmText: 'Delete Project',
+      isDanger: true,
+      onConfirm: async () => {
+        await deleteProject(projectId);
+        window.showToast?.('Project Deleted', `Project "${projectName}" was deleted successfully.`, 'success');
+        const cur = store.getCurrentProject();
+        if (cur && cur.id === projectId) {
+          store.setCurrentProject(null);
+        }
+        await loadProjects();
+      }
+    });
+  };
 
-    if (!tbody || !mobileList) return;
+  function renderTableRows(projects) {
+    const listContainer = document.getElementById('projects-table-body');
+    if (!listContainer) return;
 
     if (!projects || projects.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: var(--space-2xl);">
-            <div class="empty-state-card" style="border: none; padding: 0;">
-              <div class="empty-state-icon">
-                <span class="material-symbols-outlined">folder_open</span>
-              </div>
-              <h3 class="font-headline-sm">No Projects Available</h3>
-              <p class="font-body-sm" style="color: var(--color-text-secondary); max-width: 320px;">
-                You don't have any projects registered in this workspace yet.
-              </p>
-              <button class="btn btn-primary" onclick="window.openNewProjectModal()" style="margin-top: var(--space-sm);">
-                <span class="material-symbols-outlined">add</span>
+      listContainer.innerHTML = `
+        <div style="text-align: center; padding: 3.5rem 1rem;">
+          <div class="empty-state-card" style="border: none; padding: 0;">
+            <div class="empty-state-icon">
+              <span class="material-symbols-outlined">folder_open</span>
+            </div>
+            <h3 class="font-headline-sm" style="margin: 0.5rem 0 0.25rem 0;">No Projects Available</h3>
+            <p class="font-body-sm" style="color: var(--color-text-secondary); max-width: 360px; margin: 0 auto 1.25rem auto;">
+              You don't have any projects registered yet. Create a new vault or join an existing project with an invite code.
+            </p>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
+              <button class="btn btn-secondary" onclick="window.openJoinProjectModal()" style="height: 36px; padding: 0 14px; border-radius: var(--radius-md);">
+                <span class="material-symbols-outlined" style="font-size: 16px;">login</span>
+                <span>Join with Code</span>
+              </button>
+              <button class="btn btn-primary" onclick="window.openNewProjectModal()" style="height: 36px; padding: 0 14px; background-color: #09090b; color: #fff; border-radius: var(--radius-md);">
+                <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
                 <span>Create New Project</span>
               </button>
             </div>
-          </td>
-        </tr>
+          </div>
+        </div>
       `;
-      mobileList.innerHTML = `<div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">No projects registered.</div>`;
       return;
     }
 
-    tbody.innerHTML = projects.map(p => `
-      <tr>
-        <td style="vertical-align: top;">
-          <div style="display: flex; align-items: flex-start; gap: var(--space-sm);">
-            <div style="width: 32px; height: 32px; border-radius: var(--radius-sm); background-color: var(--color-primary-container); color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
-              <span class="material-symbols-outlined" style="font-size: 18px;">account_balance_wallet</span>
+    listContainer.innerHTML = projects.map(p => {
+      const createdDate = p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Recent';
+      return `
+        <article style="padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; transition: background-color var(--transition-fast);">
+          <!-- Left: Icon + Info -->
+          <div style="display: flex; align-items: flex-start; gap: 0.875rem; min-width: 260px; flex: 1;">
+            <div style="width: 38px; height: 38px; border-radius: var(--radius-md); background-color: var(--color-surface-container-low); border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; color: var(--color-text-primary); flex-shrink: 0; margin-top: 2px;">
+              <span class="material-symbols-outlined" style="font-size: 20px;">folder</span>
             </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <a href="#variables" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables'); return false;" class="font-label-code-md" style="font-weight: 600; color: var(--color-text-primary);">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <a href="#variables" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables'); return false;" style="font-size: 14px; font-weight: 600; color: var(--color-text-primary); text-decoration: none;">
                   ${escapeHtml(p.name)}
                 </a>
-                <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary); font-size: 10px;">tier-0</span>
+                <span style="font-size: 10px; font-family: var(--font-mono); text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background-color: var(--color-canvas); border: 1px solid var(--color-border); color: var(--color-text-secondary);">
+                  Active
+                </span>
               </div>
-              <p class="font-body-sm" style="color: var(--color-text-secondary); margin-top: 2px; max-width: 360px;">
-                Enterprise runtime repository & cryptographic parameter vault.
-              </p>
-              <div style="display: flex; align-items: center; gap: 4px; margin-top: 6px; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted);">
-                <span class="material-symbols-outlined" style="font-size: 14px;">call_split</span>
-                <span>github.com/acme-corp/${escapeHtml(p.name)}</span>
+              <div style="font-size: 12px; color: var(--color-text-secondary); display: flex; align-items: center; gap: 8px;">
+                <span>ID #${p.id}</span>
+                <span>•</span>
+                <span>Created ${createdDate}</span>
               </div>
             </div>
           </div>
-        </td>
-        <td style="vertical-align: top;">
-          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-            <span class="badge badge-dev badge-code">Dev</span>
-            <span class="badge badge-stg badge-code">Staging</span>
-            <span class="badge badge-prod badge-code">Prod</span>
-          </div>
-        </td>
-        <td style="vertical-align: top;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <div style="display: flex; margin-right: -4px;">
-              <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-primary); color: #FFF; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: 2px solid #FFF;">AC</div>
-              <div style="width: 24px; height: 24px; border-radius: 50%; background: var(--color-secondary); color: #FFF; font-size: 10px; font-weight: 600; display: flex; align-items: center; justify-content: center; border: 2px solid #FFF; margin-left: -6px;">SC</div>
-            </div>
-            <span style="font-size: 12px; color: var(--color-text-secondary);">4 members</span>
-          </div>
-        </td>
-        <td style="vertical-align: top;">
-          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--color-text-primary);">
-            ${new Date(p.created_at).toLocaleDateString()}
-          </div>
-          <div style="font-size: 11px; color: var(--color-text-secondary);">by Owner</div>
-        </td>
-        <td style="text-align: right; vertical-align: top;">
-          <button class="btn btn-secondary btn-sm" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables')">
-            <span>Open Environments</span>
-          </button>
-        </td>
-      </tr>
-    `).join('');
 
-    mobileList.innerHTML = projects.map(p => `
-      <div class="mobile-data-card">
-        <div class="mobile-data-card-header">
-          <div>
-            <span class="font-label-code-md" style="font-weight: 600; color: var(--color-text-primary);">${escapeHtml(p.name)}</span>
-            <p class="font-body-sm" style="color: var(--color-text-secondary); margin-top: 2px;">Created ${new Date(p.created_at).toLocaleDateString()}</p>
+          <!-- Center: Environments -->
+          <div style="display: flex; flex-direction: column; gap: 4px; min-width: 180px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="badge badge-prod">Production</span>
+              <span class="badge badge-stg">Staging</span>
+              <span class="badge badge-dev">Development</span>
+            </div>
           </div>
-          <span class="badge badge-prod badge-code">Prod</span>
-        </div>
-        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: var(--space-xs);">
-          <span style="font-size: 12px; color: var(--color-text-secondary);">Dev • Staging • Prod</span>
-          <button class="btn btn-secondary btn-sm" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables')">
-            Open →
-          </button>
-        </div>
-      </div>
-    `).join('');
+
+          <!-- Right: Actions -->
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables')" style="height: 32px; padding: 0 12px; font-size: 12px; font-weight: 500; border-radius: var(--radius-md);">
+              <span>Manage Keys</span>
+            </button>
+            <a href="#settings" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'settings'); return false;" class="btn btn-ghost btn-icon" title="Project Settings" style="height: 32px; width: 32px;">
+              <span class="material-symbols-outlined" style="font-size: 18px;">settings</span>
+            </a>
+            <button class="btn btn-ghost btn-icon" onclick="window.confirmDeleteProject(${p.id}, '${escapeHtml(p.name)}')" title="Delete Project" style="height: 32px; width: 32px; color: var(--color-error);">
+              <span class="material-symbols-outlined" style="font-size: 18px;">delete</span>
+            </button>
+          </div>
+        </article>
+      `;
+    }).join('');
   }
 
   // Filter Search

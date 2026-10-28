@@ -1,5 +1,6 @@
 /**
  * EnvShare Authentication Views & Logic
+ * Extracted and aligned with Google Stitch designs (envshare_login_refined & envshare_register_refined)
  *
  * Security Constraints:
  * - Passwords and JWT tokens are NEVER printed, logged, stored in localStorage/sessionStorage, or put in URLs.
@@ -15,7 +16,6 @@ import { router } from './router.js';
 export function validateEmail(email) {
   const trimmed = email.trim();
   if (!trimmed) return 'Email address is required.';
-  // Standard RFC 5322 compatible regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(trimmed)) {
     return 'Please enter a valid email address.';
@@ -57,75 +57,132 @@ export function validatePasswordForLogin(password) {
 export function renderLoginView(container) {
   container.innerHTML = `
     <div class="auth-view-wrapper">
-      <div class="auth-box" role="region" aria-labelledby="login-title">
-        <div class="auth-box-header">
-          <div class="sidebar-brand-icon" style="margin-bottom: var(--space-xs);">
-            <span class="material-symbols-outlined" style="font-size: 24px; color: #FFFFFF;">lock_open</span>
-          </div>
-          <h1 id="login-title" class="type-h3" style="margin: 0; color: var(--color-text-primary);">EnvShare</h1>
-          <p class="type-body-sm" style="margin: 0; color: var(--color-text-secondary);">Enterprise Environment Security & Team Secrets</p>
+      <!-- Minimal Header Bar -->
+      <header class="auth-header-bar">
+        <div></div>
+        <div style="display: flex; align-items: center; gap: 1rem; font-size: 12px;">
+          <a href="#settings" class="brand-link" style="color: var(--color-text-secondary); font-size: 12px; font-weight: 500;">Documentation</a>
         </div>
+      </header>
 
-        <div id="auth-alert" class="auth-alert" role="alert" style="display: none; padding: 10px 14px; background-color: var(--color-error-bg); border: 1px solid var(--color-error-border); border-radius: var(--radius-md); color: var(--color-error-text); font-size: var(--font-size-body-sm);"></div>
-
-        <form id="login-form" novalidate style="display: flex; flex-direction: column; gap: var(--space-md);">
-          <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-            <label for="login-email" class="form-label">
-              <span>Work email address</span>
-            </label>
-            <input
-              id="login-email"
-              name="email"
-              type="email"
-              class="input-control"
-              placeholder="engineer@company.com"
-              autocomplete="username"
-              required
-            >
-            <div id="login-email-error" class="form-error" style="display: none; color: var(--color-error); font-size: var(--font-size-caption);"></div>
-          </div>
-
-          <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-            <label for="login-password" class="form-label">
-              <span>Master Password</span>
-            </label>
-            <div style="position: relative; display: flex; align-items: center;">
-              <input
-                id="login-password"
-                name="password"
-                type="password"
-                class="input-control font-mono"
-                placeholder="••••••••••••"
-                autocomplete="current-password"
-                required
-                style="padding-right: 40px;"
-              >
-              <button
-                id="login-toggle-password"
-                type="button"
-                class="btn-icon"
-                aria-label="Toggle password visibility"
-                style="position: absolute; right: 4px; width: 32px; height: 32px;"
-              >
-                <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span>
-              </button>
+      <!-- Main Center Auth Container -->
+      <main class="auth-main-area">
+        <div class="auth-card" role="region" aria-labelledby="login-title">
+          <div class="auth-card-header">
+            <div class="auth-brand-badge">
+              <div class="auth-brand-logo">
+                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+                  <rect height="11" rx="2" ry="2" width="18" x="3" y="11"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <span style="font-weight: 600; font-size: 16px; letter-spacing: -0.02em; color: var(--color-text-primary);">EnvShare</span>
             </div>
-            <div id="login-password-error" class="form-error" style="display: none; color: var(--color-error); font-size: var(--font-size-caption);"></div>
+            <h1 id="login-title" class="font-headline-lg" style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-text-primary);">Welcome back</h1>
+            <p class="font-body-sm" style="margin-top: 4px; color: var(--color-text-secondary);">Sign in to your workspace.</p>
           </div>
 
-          <button id="login-submit-btn" type="submit" class="btn btn-primary" style="height: 40px; margin-top: var(--space-xs); width: 100%;">
-            <span class="btn-text">Authenticate Workspace</span>
-            <span class="spinner" style="display: none;"></span>
-          </button>
-        </form>
+          <div id="auth-alert" class="auth-alert" role="alert" style="display: none; margin-bottom: 1rem; padding: 10px 14px; background-color: var(--color-error-bg); border: 1px solid var(--color-error-border); border-radius: var(--radius-md); color: var(--color-error-text); font-size: var(--font-size-body-sm);"></div>
 
-        <div style="text-align: center; border-top: 1px solid var(--color-border); padding-top: var(--space-md);">
-          <p class="type-caption" style="color: var(--color-text-secondary); margin: 0;">
-            New to EnvShare?
-            <a href="#register" class="brand-link" style="color: var(--color-primary); font-weight: var(--font-weight-semibold); text-decoration: underline;">Create an account</a>
-          </p>
+          <form id="login-form" novalidate style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="login-email" class="form-label" style="font-size: 12px; font-weight: 500; color: var(--color-text-secondary);">
+                <span>Work email</span>
+              </label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                class="input-control"
+                placeholder="name@company.com"
+                autocomplete="username"
+                required
+                style="height: 40px; border-radius: var(--radius-md); padding: 0 14px; font-size: 14px;"
+              >
+              <div id="login-email-error" class="form-error" style="display: none; color: var(--color-error); font-size: 12px; margin-top: 4px;"></div>
+            </div>
+
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="login-password" class="form-label" style="font-size: 12px; font-weight: 500; color: var(--color-text-secondary);">
+                <span>Password</span>
+              </label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <input
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  class="input-control font-mono"
+                  placeholder="••••••••••••"
+                  autocomplete="current-password"
+                  required
+                  style="height: 40px; border-radius: var(--radius-md); padding-left: 14px; padding-right: 40px; font-size: 14px; width: 100%;"
+                >
+                <button
+                  id="login-toggle-password"
+                  type="button"
+                  class="btn-icon"
+                  aria-label="Toggle password visibility"
+                  style="position: absolute; right: 4px; width: 32px; height: 32px; border: none; background: transparent; color: var(--color-text-secondary); cursor: pointer;"
+                >
+                  <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span>
+                </button>
+              </div>
+              <div id="login-password-error" class="form-error" style="display: none; color: var(--color-error); font-size: 12px; margin-top: 4px;"></div>
+            </div>
+
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding-top: 2px;">
+              <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; color: var(--color-text-secondary);">
+                <input type="checkbox" style="width: 16px; height: 16px; border-radius: 4px; accent-color: #09090b; cursor: pointer;">
+                <span>Remember this device</span>
+              </label>
+              <a href="#" onclick="alert('For password resets, contact your system administrator or refer to backend security recovery.'); return false;" style="color: var(--color-text-secondary); font-weight: 500; text-decoration: none;">Forgot password?</a>
+            </div>
+
+            <button id="login-submit-btn" type="submit" class="btn btn-primary" style="height: 40px; margin-top: 8px; width: 100%; background-color: #09090b; border-color: #09090b; color: #ffffff; border-radius: var(--radius-md); font-weight: 500;">
+              <span class="btn-text">Sign in</span>
+              <span class="spinner" style="display: none;"></span>
+            </button>
+          </form>
+
+          <div class="auth-sso-divider">
+            <span>OR CONTINUE WITH</span>
+          </div>
+
+          <div class="auth-sso-grid">
+            <button class="auth-sso-btn" type="button" onclick="alert('Direct SSO is managed via your enterprise SAML/OAuth policy. Use email and password to log in.');">
+              <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"></path>
+              </svg>
+              <span>GitHub</span>
+            </button>
+            <button class="auth-sso-btn" type="button" onclick="alert('Passkey hardware authentication is supported via enterprise WebAuthn.');">
+              <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+              </svg>
+              <span>Passkey</span>
+            </button>
+          </div>
+
+          <div style="margin-top: 1.5rem; text-align: center; font-size: 14px; color: var(--color-text-secondary);">
+            <p style="margin: 0;">
+              New to EnvShare?
+              <a href="#register" class="brand-link" style="color: #09090b; font-weight: 600; text-decoration: underline; margin-left: 4px;">Create an account</a>
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <!-- Clean Bottom Status Footer -->
+      <footer class="auth-footer-bar">
+        <div>
+          <span>© 2025 EnvShare Inc.</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem; color: var(--color-text-secondary);">
+          <a href="#settings" style="color: inherit; text-decoration: none;">Status</a>
+          <a href="#settings" style="color: inherit; text-decoration: none;">Security</a>
+          <a href="#settings" style="color: inherit; text-decoration: none;">Privacy</a>
+        </div>
+      </footer>
     </div>
   `;
 
@@ -219,91 +276,159 @@ export function renderLoginView(container) {
 export function renderRegisterView(container) {
   container.innerHTML = `
     <div class="auth-view-wrapper">
-      <div class="auth-box" role="region" aria-labelledby="register-title">
-        <div class="auth-box-header">
-          <div class="sidebar-brand-icon" style="margin-bottom: var(--space-xs);">
-            <span class="material-symbols-outlined" style="font-size: 24px; color: #FFFFFF;">verified_user</span>
-          </div>
-          <h1 id="register-title" class="type-h3" style="margin: 0; color: var(--color-text-primary);">Create EnvShare Account</h1>
-          <p class="type-body-sm" style="margin: 0; color: var(--color-text-secondary);">Centralize and encrypt environment variables for your team.</p>
+      <!-- Minimal Header Bar -->
+      <header class="auth-header-bar">
+        <div></div>
+        <div style="display: flex; align-items: center; gap: 1rem; font-size: 12px;">
+          <a href="#settings" class="brand-link" style="color: var(--color-text-secondary); font-size: 12px; font-weight: 500;">Documentation</a>
         </div>
+      </header>
 
-        <div id="auth-alert" class="auth-alert" role="alert" style="display: none; padding: 10px 14px; background-color: var(--color-error-bg); border: 1px solid var(--color-error-border); border-radius: var(--radius-md); color: var(--color-error-text); font-size: var(--font-size-body-sm);"></div>
-
-        <form id="register-form" novalidate style="display: flex; flex-direction: column; gap: var(--space-md);">
-          <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-            <label for="register-email" class="form-label">
-              <span>Work email address</span>
-            </label>
-            <input
-              id="register-email"
-              name="email"
-              type="email"
-              class="input-control"
-              placeholder="engineer@company.com"
-              autocomplete="email"
-              required
-            >
-            <div id="register-email-error" class="form-error" style="display: none; color: var(--color-error); font-size: var(--font-size-caption);"></div>
+      <!-- Main Center Auth Container -->
+      <main class="auth-main-area">
+        <div class="auth-card" role="region" aria-labelledby="register-title">
+          <div class="auth-card-header">
+            <div class="auth-brand-badge">
+              <div class="auth-brand-logo">
+                <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24">
+                  <rect height="11" rx="2" ry="2" width="18" x="3" y="11"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+              </div>
+              <span style="font-weight: 600; font-size: 16px; letter-spacing: -0.02em; color: var(--color-text-primary);">EnvShare</span>
+            </div>
+            <h1 id="register-title" class="font-headline-lg" style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-text-primary);">Create your account</h1>
+            <p class="font-body-sm" style="margin-top: 4px; color: var(--color-text-secondary);">Start managing your environment variables securely.</p>
           </div>
 
-          <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
-            <label for="register-password" class="form-label">
-              <span>Password</span>
-            </label>
-            <div style="position: relative; display: flex; align-items: center;">
+          <div id="auth-alert" class="auth-alert" role="alert" style="display: none; margin-bottom: 1rem; padding: 10px 14px; background-color: var(--color-error-bg); border: 1px solid var(--color-error-border); border-radius: var(--radius-md); color: var(--color-error-text); font-size: var(--font-size-body-sm);"></div>
+
+          <form id="register-form" novalidate style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="register-email" class="form-label" style="font-size: 12px; font-weight: 500; color: var(--color-text-secondary);">
+                <span>Work email</span>
+              </label>
               <input
-                id="register-password"
-                name="password"
-                type="password"
-                class="input-control font-mono"
-                placeholder="At least 12 characters"
-                autocomplete="new-password"
+                id="register-email"
+                name="email"
+                type="email"
+                class="input-control"
+                placeholder="name@company.com"
+                autocomplete="email"
                 required
-                style="padding-right: 40px;"
+                style="height: 40px; border-radius: var(--radius-md); padding: 0 14px; font-size: 14px;"
               >
-              <button
-                id="register-toggle-password"
-                type="button"
-                class="btn-icon"
-                aria-label="Toggle password visibility"
-                style="position: absolute; right: 4px; width: 32px; height: 32px;"
-              >
-                <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span>
-              </button>
+              <div id="register-email-error" class="form-error" style="display: none; color: var(--color-error); font-size: 12px; margin-top: 4px;"></div>
             </div>
-            <div id="register-password-error" class="form-error" style="display: none; color: var(--color-error); font-size: var(--font-size-caption);"></div>
 
-            <!-- Password Requirements Checklist -->
-            <div class="password-requirements" style="margin-top: var(--space-xs); padding: 8px 12px; background: var(--color-surface-container-low); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
-              <small class="type-caption" style="display: block; margin-bottom: 4px; font-weight: var(--font-weight-medium); color: var(--color-text-secondary);">Security requirements:</small>
-              <ul class="requirements-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--font-size-caption); color: var(--color-text-secondary);">
-                <li id="req-length" class="req-item" style="display: flex; align-items: center; gap: 6px;">
-                  <span class="req-icon">○</span> At least 12 characters
-                </li>
-                <li id="req-letter" class="req-item" style="display: flex; align-items: center; gap: 6px;">
-                  <span class="req-icon">○</span> At least one letter
-                </li>
-                <li id="req-number" class="req-item" style="display: flex; align-items: center; gap: 6px;">
-                  <span class="req-icon">○</span> At least one number
-                </li>
-              </ul>
+            <div class="form-group" style="display: flex; flex-direction: column; gap: 6px;">
+              <label for="register-password" class="form-label" style="font-size: 12px; font-weight: 500; color: var(--color-text-secondary);">
+                <span>Master password</span>
+              </label>
+              <div style="position: relative; display: flex; align-items: center;">
+                <input
+                  id="register-password"
+                  name="password"
+                  type="password"
+                  class="input-control font-mono"
+                  placeholder="At least 12 characters"
+                  autocomplete="new-password"
+                  required
+                  style="height: 40px; border-radius: var(--radius-md); padding-left: 14px; padding-right: 40px; font-size: 14px; width: 100%;"
+                >
+                <button
+                  id="register-toggle-password"
+                  type="button"
+                  class="btn-icon"
+                  aria-label="Toggle password visibility"
+                  style="position: absolute; right: 4px; width: 32px; height: 32px; border: none; background: transparent; color: var(--color-text-secondary); cursor: pointer;"
+                >
+                  <span class="material-symbols-outlined" style="font-size: 18px;">visibility</span>
+                </button>
+              </div>
+              <div id="register-password-error" class="form-error" style="display: none; color: var(--color-error); font-size: 12px; margin-top: 4px;"></div>
+
+              <!-- Password Requirements Checklist matching Stitch -->
+              <div class="password-requirements" style="margin-top: 6px; padding: 10px 12px; background: var(--color-surface-container-low); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                  <span class="type-caption" style="font-size: 11px; font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.04em;">Password Requirements</span>
+                  <div class="password-strength-meter" id="register-strength-meter">
+                    <span class="password-strength-dot" id="dot-1"></span>
+                    <span class="password-strength-dot" id="dot-2"></span>
+                    <span class="password-strength-dot" id="dot-3"></span>
+                  </div>
+                </div>
+                <ul class="requirements-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--color-text-secondary);">
+                  <li id="req-length" class="req-item" style="display: flex; align-items: center; gap: 6px;">
+                    <span class="req-icon">○</span> At least 12 characters
+                  </li>
+                  <li id="req-letter" class="req-item" style="display: flex; align-items: center; gap: 6px;">
+                    <span class="req-icon">○</span> At least one letter
+                  </li>
+                  <li id="req-number" class="req-item" style="display: flex; align-items: center; gap: 6px;">
+                    <span class="req-icon">○</span> At least one number
+                  </li>
+                </ul>
+              </div>
             </div>
+
+            <!-- Informational Security Note -->
+            <div class="auth-info-note">
+              If you lose your master password, you may permanently lose access to your secrets. EnvShare cannot recover it.
+            </div>
+
+            <div style="padding-top: 2px;">
+              <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; color: var(--color-text-secondary); cursor: pointer; line-height: 1.4;">
+                <input type="checkbox" required style="width: 16px; height: 16px; margin-top: 2px; border-radius: 4px; accent-color: #09090b; cursor: pointer;">
+                <span>I agree to the <a href="#settings" style="color: #09090b; font-weight: 500; text-decoration: underline;">Terms of Service</a> and <a href="#settings" style="color: #09090b; font-weight: 500; text-decoration: underline;">Privacy Policy</a>.</span>
+              </label>
+            </div>
+
+            <button id="register-submit-btn" type="submit" class="btn btn-primary" style="height: 40px; margin-top: 4px; width: 100%; background-color: #09090b; border-color: #09090b; color: #ffffff; border-radius: var(--radius-md); font-weight: 500;">
+              <span class="btn-text">Create account</span>
+              <span class="spinner" style="display: none;"></span>
+            </button>
+          </form>
+
+          <div class="auth-sso-divider">
+            <span>OR CONTINUE WITH</span>
           </div>
 
-          <button id="register-submit-btn" type="submit" class="btn btn-primary" style="height: 40px; margin-top: var(--space-xs); width: 100%;">
-            <span class="btn-text">Create Account</span>
-            <span class="spinner" style="display: none;"></span>
-          </button>
-        </form>
+          <div class="auth-sso-grid">
+            <button class="auth-sso-btn" type="button" onclick="alert('Direct SSO is managed via your enterprise SAML/OAuth policy. Use email and password to register.');">
+              <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"></path>
+              </svg>
+              <span>GitHub</span>
+            </button>
+            <button class="auth-sso-btn" type="button" onclick="alert('Passkey hardware authentication is supported via enterprise WebAuthn.');">
+              <svg style="width: 16px; height: 16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+              </svg>
+              <span>Passkey</span>
+            </button>
+          </div>
 
-        <div style="text-align: center; border-top: 1px solid var(--color-border); padding-top: var(--space-md);">
-          <p class="type-caption" style="color: var(--color-text-secondary); margin: 0;">
-            Already have an account?
-            <a href="#login" class="brand-link" style="color: var(--color-primary); font-weight: var(--font-weight-semibold); text-decoration: underline;">Log in</a>
-          </p>
+          <div style="margin-top: 1.5rem; text-align: center; font-size: 14px; color: var(--color-text-secondary);">
+            <p style="margin: 0;">
+              Already have an account?
+              <a href="#login" class="brand-link" style="color: #09090b; font-weight: 600; text-decoration: underline; margin-left: 4px;">Log in</a>
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
+
+      <!-- Clean Bottom Status Footer -->
+      <footer class="auth-footer-bar">
+        <div>
+          <span>© 2025 EnvShare Inc.</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 1rem; color: var(--color-text-secondary);">
+          <a href="#settings" style="color: inherit; text-decoration: none;">Status</a>
+          <a href="#settings" style="color: inherit; text-decoration: none;">Security</a>
+          <a href="#settings" style="color: inherit; text-decoration: none;">Privacy</a>
+        </div>
+      </footer>
     </div>
   `;
 
@@ -316,10 +441,13 @@ export function renderRegisterView(container) {
     toggleBtn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
   });
 
-  // Dynamic live validation checklist
+  // Dynamic live validation checklist & strength meter
   const reqLength = container.querySelector('#req-length');
   const reqLetter = container.querySelector('#req-letter');
   const reqNumber = container.querySelector('#req-number');
+  const dot1 = container.querySelector('#dot-1');
+  const dot2 = container.querySelector('#dot-2');
+  const dot3 = container.querySelector('#dot-3');
 
   passwordInput.addEventListener('input', () => {
     const val = passwordInput.value;
@@ -331,14 +459,20 @@ export function renderRegisterView(container) {
     updateReqItem(reqLength, hasLength);
     updateReqItem(reqLetter, hasLetter);
     updateReqItem(reqNumber, hasNumber);
+
+    dot1.classList.toggle('is-active', hasLength);
+    dot2.classList.toggle('is-active', hasLetter);
+    dot3.classList.toggle('is-active', hasNumber);
   });
 
   function updateReqItem(el, isValid) {
     if (isValid) {
       el.classList.add('is-valid');
+      el.style.color = '#10B981';
       el.querySelector('.req-icon').textContent = '✓';
     } else {
       el.classList.remove('is-valid');
+      el.style.color = 'var(--color-text-secondary)';
       el.querySelector('.req-icon').textContent = '○';
     }
   }

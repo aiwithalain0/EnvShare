@@ -999,34 +999,175 @@ textarea.input-control {
    Authentication Views Layout & Aesthetics
    ========================================================================== */
 
+/* ==========================================================================
+   Authentication Views Layout & Aesthetics (Stitch Precision Cryptographic)
+   ========================================================================== */
+
 .auth-view-wrapper {
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-lg);
+  flex-direction: column;
+  justify-content: space-between;
   background-color: var(--color-canvas);
 }
 
-.auth-box {
+.auth-header-bar {
   width: 100%;
-  max-width: 440px;
+  border-bottom: 1px solid var(--color-border);
   background-color: var(--color-surface-container-lowest);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-2xl) var(--space-xl);
+  padding: 1rem 1.5rem;
   display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
+  align-items: center;
+  justify-content: space-between;
 }
 
-.auth-box-header {
-  text-align: center;
+.auth-footer-bar {
+  width: 100%;
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-surface-container-lowest);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-xs);
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-muted);
+}
+
+@media (min-width: 640px) {
+  .auth-footer-bar {
+    flex-direction: row;
+  }
+}
+
+.auth-main-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  margin: 1.5rem 0;
+  flex-direction: column;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background-color: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 10px 25px -5px rgba(0, 0, 0, 0.04);
+  padding: 2rem 2.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-card-header {
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-brand-logo {
+  width: 28px;
+  height: 28px;
+  background-color: #09090b;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  box-shadow: var(--shadow-xs);
+  flex-shrink: 0;
+}
+
+.auth-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.auth-sso-divider {
+  position: relative;
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.auth-sso-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.auth-sso-divider span {
+  position: relative;
+  background-color: var(--color-surface-container-lowest);
+  padding: 0 0.75rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.auth-sso-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.625rem;
+}
+
+.auth-sso-btn {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  border: 1px solid var(--color-border-strong);
+  background-color: var(--color-surface-container-lowest);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-body-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.auth-sso-btn:hover {
+  background-color: var(--color-surface-container-low);
+}
+
+.password-strength-meter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.password-strength-dot {
+  width: 16px;
+  height: 4px;
+  border-radius: 9999px;
+  background-color: var(--color-border);
+  transition: background-color var(--transition-fast);
+}
+
+.password-strength-dot.is-active {
+  background-color: #10B981;
+}
+
+.auth-info-note {
+  background-color: var(--color-surface-container-low);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  font-size: var(--font-size-caption);
+  color: var(--color-text-secondary);
+  line-height: 1.5;
 }
 
 /* ==========================================================================

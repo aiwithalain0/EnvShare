@@ -36,18 +36,24 @@ class Router {
    */
   navigate(path, params = {}) {
     this._params = params;
-    window.location.hash = `#${path}`;
+    const targetHash = `#${path}`;
+    if (window.location.hash === targetHash) {
+      this._handleHashChange();
+    } else {
+      window.location.hash = targetHash;
+    }
   }
 
   /**
    * Initialize router on app startup
    */
   init(defaultRoute = 'projects') {
-    if (!window.location.hash) {
+    const rawHash = window.location.hash.replace(/^#\/?/, '').trim();
+    if (!rawHash) {
       window.location.hash = `#${defaultRoute}`;
-    } else {
-      this._handleHashChange();
     }
+    // Always dispatch route handling on initialization
+    this._handleHashChange();
   }
 
   /**
@@ -80,27 +86,34 @@ class Router {
       if (!routeConfig) {
         // Unknown route fallback
         const fallback = store.isAuthenticated() ? 'overview' : 'login';
+        this._isNavigating = false;
         this.navigate(fallback);
         return;
       }
 
       // Check auth protection
       if (routeConfig.requiresAuth && !store.isAuthenticated()) {
+        this._isNavigating = false;
         this.navigate('login');
         return;
       }
 
       // Prevent logged-in users from visiting auth pages
       if (!routeConfig.requiresAuth && store.isAuthenticated() && (targetRoute === 'login' || targetRoute === 'register')) {
+        this._isNavigating = false;
         this.navigate('overview');
         return;
       }
 
       this._currentRoute = targetRoute;
 
-      // Execute route handler
+      // Execute route handler safely
       if (typeof routeConfig.handler === 'function') {
-        routeConfig.handler(this._params);
+        try {
+          routeConfig.handler(this._params);
+        } catch (handlerError) {
+          console.error(`Route handler for "${targetRoute}" encountered an error:`, handlerError);
+        }
       }
 
       // Update active state in UI nav items

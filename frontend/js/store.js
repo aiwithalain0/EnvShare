@@ -128,6 +128,14 @@ class Store {
   }
 
   /**
+   * Get authenticated user profile metadata
+   * @returns {object|null}
+   */
+  getUser() {
+    return this._state.auth.user;
+  }
+
+  /**
    * Clear auth session from memory on logout or 401
    */
   clearAuth() {
@@ -149,6 +157,10 @@ class Store {
   setProjects(projectsList) {
     this._state.projects.list = Array.isArray(projectsList) ? projectsList : [];
     this._emit('projects', this._state.projects);
+  }
+
+  getProjects() {
+    return this._state.projects.list;
   }
 
   setActiveProject(project) {

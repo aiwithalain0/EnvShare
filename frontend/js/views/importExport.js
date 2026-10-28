@@ -1,40 +1,54 @@
+
 /**
- * EnvShare Import .env Workflow View
- * Extracted from Google Stitch Project 7000277523774803089
+ * EnvShare Import & Export Workflow View
+ * Supports secure import previews, overwrite confirmation,
+ * unchanged-value detection, restoration, and .env/JSON export.
  */
 
 import { store } from '../store.js';
-import { router } from '../router.js';
-import { listProjects, listEnvironments, previewEnvImport, commitEnvImport } from '../api.js';
+import {
+  listProjects,
+  listEnvironments,
+  listVariables,
+  revealVariable,
+  previewEnvImport,
+  commitEnvImport,
+} from '../api.js';
 
 export async function renderImportExportView(container) {
   const state = store.getState();
   let activeProject = state.projects.activeProject;
-  let environments = state.environments.list;
+  let environments = state.environments.list || [];
 
   if (!activeProject) {
     try {
       const projects = await listProjects();
       store.setProjects(projects);
-      if (projects.length > 0) {
+
+      if (projects.length) {
         activeProject = projects[0];
         store.setActiveProject(activeProject);
       }
-    } catch {}
+    } catch {
+      // The empty state below handles projects that cannot be loaded.
+    }
   }
 
   if (!activeProject) {
     container.innerHTML = `
-      <div class="empty-state-card">
-        <h2 class="font-headline-md">No Project Selected</h2>
-        <p class="font-body-sm" style="color: var(--color-text-secondary);">Select a project first to import environment variables.</p>
-      </div>
-    `;
+      <div class="empty-state-card" style="padding:3rem 1rem;">
+        <div class="empty-state-icon">
+          <span class="material-symbols-outlined">folder_off</span>
+        </div>
+        <h2 class="font-headline-md" style="margin:.5rem 0 .25rem;">No Project Selected</h2>
+        <p class="font-body-sm" style="color:var(--color-text-secondary);max-width:320px;margin:0 auto 1rem;">
+          Select a project first to import or export environment variables.
+        </p>
+      </div>`;
     return;
   }
 
-  // Load environments if empty
-  if (!environments || environments.length === 0) {
+  if (!environments.length) {
     try {
       environments = await listEnvironments(activeProject.id);
       store.setEnvironments(environments);
@@ -43,422 +57,573 @@ export async function renderImportExportView(container) {
     }
   }
 
-  let selectedEnvId = environments[0]?.id || null;
-  let currentStep = 1; // 1: Upload/Paste, 2: Parse & Conflicts, 3: Review & Resolving, 4: Done
+  let selectedEnv = store.getActiveEnvironment() || environments[0] || null;
+  let selectedEnvId = selectedEnv?.id || null;
   let previewData = null;
   let rawContent = '';
-  let conflictStrategy = 'overwrite';
-  let maskSecrets = true;
+  let activeInputMode = 'upload';
 
-  container.innerHTML = `
-    <!-- Top Context Header Bar: Status & Directives -->
-    <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
-      <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-sm);">
-        <div style="display: flex; align-items: center; gap: var(--space-xs); font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary);">
-          <span>WORKFLOW</span>
-          <span>/</span>
-          <span style="font-weight: 700; color: var(--color-primary);">IMPORT .ENV SPECIFICATION</span>
-          <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-primary); font-size: 10px;">PARSER v2.4</span>
+  renderMainLayout();
+
+  function renderMainLayout() {
+    const environmentOptions = environments.map(env => `
+      <option value="${env.id}" ${env.id === selectedEnvId ? 'selected' : ''}>
+        ${escapeHtml(env.name)}
+      </option>
+    `).join('');
+
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:1.5rem;">
+        <div style="display:flex;flex-direction:column;gap:.5rem;border-bottom:1px solid var(--color-border);padding-bottom:1.25rem;">
+          <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;text-transform:uppercase;color:var(--color-text-secondary);letter-spacing:.05em;">
+            <span>${escapeHtml(activeProject.name)}</span><span>/</span><span>Import &amp; Export</span>
+          </div>
+          <div>
+            <h1 class="font-headline-lg" style="margin:0;font-size:24px;font-weight:600;letter-spacing:-.02em;color:var(--color-text-primary);">Import / Export</h1>
+            <p class="font-body-sm" style="margin-top:4px;color:var(--color-text-secondary);">
+              Import keys and encrypted values from a .env file, or export environment bundles.
+            </p>
+          </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: var(--space-xs); padding: 4px 12px; background: var(--color-surface-container-lowest); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 11px; box-shadow: var(--shadow-xs);">
-          <span class="pulse-dot"></span>
-          <span style="font-weight: 700; color: var(--color-primary);">SHA-256</span>
-          <span style="color: var(--color-text-secondary);">Verified In-Memory</span>
-        </div>
-      </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:1.5rem;align-items:start;">
 
-      <div style="margin-top: 4px;">
-        <h1 class="font-headline-lg">Sync Environment Changeset</h1>
-        <p class="font-body-sm" style="color: var(--color-text-secondary); margin-top: 2px;">
-          Parse, inspect conflicts, and atomically apply standard dotenv files to target environment.
-        </p>
-      </div>
-    </div>
-
-    <!-- 1. Multi-Stage Progress Stepper -->
-    <nav class="stepper-nav" aria-label="Import Progress">
-      <ol class="stepper-list">
-        <li class="stepper-item ${currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : 'upcoming'}" id="step-nav-1">
-          <div class="stepper-bubble">
-            ${currentStep > 1 ? '<span class="material-symbols-outlined" style="font-size: 14px;">check</span>' : '01'}
-          </div>
-          <div class="stepper-text">
-            <p class="stepper-step-label">Step 01</p>
-            <p class="stepper-step-title">Upload / Paste</p>
-          </div>
-        </li>
-
-        <li class="stepper-item ${currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : 'upcoming'}" id="step-nav-2">
-          <div class="stepper-bubble">
-            ${currentStep > 2 ? '<span class="material-symbols-outlined" style="font-size: 14px;">check</span>' : '02'}
-          </div>
-          <div class="stepper-text">
-            <p class="stepper-step-label">Step 02</p>
-            <p class="stepper-step-title">Parse & Conflicts</p>
-          </div>
-        </li>
-
-        <li class="stepper-item ${currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : 'upcoming'}" id="step-nav-3">
-          <div class="stepper-bubble">
-            ${currentStep > 3 ? '<span class="material-symbols-outlined" style="font-size: 14px;">check</span>' : '03'}
-          </div>
-          <div class="stepper-text">
-            <p class="stepper-step-label">Step 03</p>
-            <p class="stepper-step-title">Review & Resolving</p>
-          </div>
-        </li>
-
-        <li class="stepper-item ${currentStep === 4 ? 'active' : 'upcoming'}" id="step-nav-4">
-          <div class="stepper-bubble">04</div>
-          <div class="stepper-text">
-            <p class="stepper-step-label">Step 04</p>
-            <p class="stepper-step-title">Import & Sync</p>
-          </div>
-        </li>
-      </ol>
-    </nav>
-
-    <!-- Dynamic Step Content Container -->
-    <div id="import-step-container">
-      <!-- Step 1 View: Destination Select & File Upload / Raw Paste -->
-      <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
-        <div style="display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--space-md);">
-          <!-- Target Environment Card -->
-          <div class="metric-card" style="grid-column: span 6;">
-            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
-              <div>
-                <span class="font-label-code-sm" style="color: var(--color-text-secondary); text-transform: uppercase;">TARGET DESTINATION</span>
-                <h2 class="font-headline-sm" style="color: var(--color-primary); margin-top: 2px;">${escapeHtml(activeProject.name)}</h2>
-                <p class="font-body-sm" style="color: var(--color-text-secondary);">Enterprise Parameter Vault</p>
+          <section class="table-surface-card" style="border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-container-lowest);padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;">
+            <div style="display:flex;flex-direction:column;gap:.5rem;border-bottom:1px solid var(--color-border);padding-bottom:1rem;">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+                <h2 style="font-size:16px;font-weight:600;color:var(--color-text-primary);margin:0;">Import Variables</h2>
+                <div style="display:flex;align-items:center;background:var(--color-surface-container-low);border-radius:var(--radius-md);padding:2px;border:1px solid var(--color-border);">
+                  <button id="tab-upload" type="button" style="padding:4px 12px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:none;cursor:pointer;background:var(--color-surface-container-lowest);color:var(--color-text-primary);">Upload File</button>
+                  <button id="tab-paste" type="button" style="padding:4px 12px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:none;cursor:pointer;background:transparent;color:var(--color-text-secondary);">Paste Content</button>
+                </div>
               </div>
-              <span class="material-symbols-outlined" style="color: var(--color-secondary); font-size: 24px;">hub</span>
+              <p class="font-body-sm" style="color:var(--color-text-secondary);margin:0;">Import variables into the selected environment.</p>
             </div>
 
-            <div style="background-color: var(--color-surface-container-low); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle); display: flex; flex-direction: column; gap: 6px;">
-              <label for="import-dest-env-select" style="font-size: var(--font-size-label-ui); font-weight: 600; color: var(--color-text-secondary); text-transform: uppercase;">
-                Destination Environment
-              </label>
-              <select id="import-dest-env-select" class="input-control" style="cursor: pointer;">
-                ${environments.map(e => `
-                  <option value="${e.id}" ${e.id === selectedEnvId ? 'selected' : ''}>${escapeHtml(e.name)}</option>
-                `).join('')}
-              </select>
-            </div>
-          </div>
-
-          <!-- Manifest Guidance Card -->
-          <div class="metric-card" style="grid-column: span 6;">
-            <div style="display: flex; align-items: flex-start; justify-content: space-between;">
-              <div>
-                <span class="font-label-code-sm" style="color: var(--color-text-secondary); text-transform: uppercase;">PARSER STANDARDS</span>
-                <h2 class="font-headline-sm" style="color: var(--color-primary); margin-top: 2px;">RFC DotEnv v2.4</h2>
-                <p class="font-body-sm" style="color: var(--color-text-secondary);">Supports KEY=VALUE, export prefix, and quoted literals.</p>
-              </div>
-              <span class="material-symbols-outlined" style="color: var(--color-secondary); font-size: 24px;">verified</span>
-            </div>
-
-            <div style="background-color: var(--color-surface-container-low); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--color-border-subtle); font-size: 12px; color: var(--color-text-secondary); line-height: 1.4;">
-              All incoming values are validated client-side and encrypted with AES-256-GCM before entering storage.
-            </div>
-          </div>
-        </div>
-
-        <!-- Raw Paste Area -->
-        <div class="table-surface-card" style="padding: var(--space-lg);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm);">
             <div>
-              <h3 class="font-headline-sm">Paste .env File Content</h3>
-              <p class="font-body-sm" style="color: var(--color-text-secondary);">Paste raw environment lines, or drag and drop a .env file below.</p>
+              <label for="import-dest-env-select" style="display:block;font-size:12px;font-weight:500;color:var(--color-text-secondary);margin-bottom:6px;">Target Destination Environment</label>
+              <select id="import-dest-env-select" class="input-control" style="height:36px;width:100%;border-radius:var(--radius-md);font-size:13px;" ${!environments.length ? 'disabled' : ''}>
+                ${environmentOptions}
+              </select>
+              ${!environments.length ? '<p style="font-size:12px;color:var(--color-text-secondary);">Create an environment before importing variables.</p>' : ''}
             </div>
-            <label class="btn btn-secondary btn-sm" style="cursor: pointer;">
-              <span class="material-symbols-outlined">attach_file</span>
-              <span>Upload File</span>
-              <input id="import-file-input" type="file" accept=".env,text/plain" style="display: none;">
-            </label>
-          </div>
 
-          <textarea id="import-raw-textarea" class="input-control font-mono" placeholder="DATABASE_URL=postgres://user:pass@host:5432/db&#10;STRIPE_SECRET_KEY=sk_test_51M...&#10;PORT=8000" style="min-height: 220px; font-size: 13px; line-height: 1.5;"></textarea>
+            <div id="upload-panel" style="display:flex;flex-direction:column;gap:.75rem;">
+              <div id="dropzone-box" style="border:2px dashed var(--color-border-strong);border-radius:var(--radius-lg);padding:1.5rem;background:var(--color-canvas);text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;">
+                <div style="width:40px;height:40px;border-radius:50%;background:var(--color-surface-container-lowest);border:1px solid var(--color-border);display:flex;align-items:center;justify-content:center;margin-bottom:.75rem;color:var(--color-text-secondary);">
+                  <span class="material-symbols-outlined" style="font-size:20px;">upload_file</span>
+                </div>
+                <p style="font-size:13px;font-weight:500;color:var(--color-text-primary);margin:0;">Click to select or drag and drop a .env file</p>
+                <p style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;">Accepts .env files up to 512 KB</p>
+                <input id="import-file-input" type="file" accept=".env,.local,.production,text/plain" style="display:none;">
+              </div>
 
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: var(--space-md);">
-            <button class="btn btn-secondary" onclick="window.location.hash='#variables'">
-              <span>Cancel</span>
-            </button>
-            <button id="btn-parse-env" class="btn btn-primary">
-              <span>Parse & Inspect Conflicts</span>
-              <span class="material-symbols-outlined">arrow_forward</span>
-            </button>
-          </div>
+              <div id="file-info-pill" style="display:none;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-surface-container-low);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-text-secondary);">description</span>
+                  <span id="file-name-label" style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--color-text-primary);">.env</span>
+                  <span id="file-size-label" style="font-size:11px;color:var(--color-text-secondary);"></span>
+                </div>
+                <button id="btn-remove-file" type="button" aria-label="Remove selected file" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-secondary);padding:2px;">
+                  <span class="material-symbols-outlined" style="font-size:16px;">close</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="paste-panel" style="display:none;flex-direction:column;gap:.5rem;">
+              <textarea id="import-raw-textarea" class="input-control font-mono" placeholder="DATABASE_URL=your_database_url&#10;API_KEY=your_api_key&#10;PORT=8000" style="min-height:180px;font-size:12px;line-height:1.5;border-radius:var(--radius-md);"></textarea>
+            </div>
+
+            <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);display:flex;flex-direction:column;gap:10px;">
+              <label for="overwrite-existing-checkbox" style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;">
+                <input id="overwrite-existing-checkbox" type="checkbox" style="margin-top:3px;accent-color:#09090b;">
+                <span>
+                  <span style="display:block;font-size:13px;font-weight:600;color:var(--color-text-primary);">Overwrite existing variables</span>
+                  <span style="display:block;margin-top:3px;font-size:12px;line-height:1.5;color:var(--color-text-secondary);">Replace changed values for matching keys. Previous values should remain in version history.</span>
+                </span>
+              </label>
+              <p id="overwrite-warning" style="display:none;margin:0;font-size:12px;line-height:1.5;color:var(--color-error,#b91c1c);">
+                Overwrite is enabled. Changed values will be replaced after confirmation.
+              </p>
+            </div>
+
+            <p style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;gap:6px;margin:0;">
+              <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-text-muted);">info</span>
+              <span>Comments and blank lines are ignored. Values are encrypted before storage.</span>
+            </p>
+
+            <div style="display:flex;justify-content:flex-end;padding-top:4px;">
+              <button id="btn-preview-import" class="btn btn-primary" type="button" style="height:36px;padding:0 16px;background:#09090b;color:#fff;border-radius:var(--radius-md);font-size:13px;font-weight:500;" ${!environments.length ? 'disabled' : ''}>
+                <span>Preview Import</span>
+                <span class="material-symbols-outlined" style="font-size:16px;">visibility</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="table-surface-card" style="border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-container-lowest);padding:1.5rem;display:flex;flex-direction:column;gap:1.25rem;">
+            <div style="display:flex;flex-direction:column;gap:.5rem;border-bottom:1px solid var(--color-border);padding-bottom:1rem;">
+              <h2 style="font-size:16px;font-weight:600;color:var(--color-text-primary);margin:0;">Export Variables</h2>
+              <p class="font-body-sm" style="color:var(--color-text-secondary);margin:0;">Export active environment variables to a .env or JSON file.</p>
+            </div>
+
+            <div style="background:var(--color-surface-container-low);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:1rem;display:flex;flex-direction:column;gap:.75rem;">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span class="material-symbols-outlined" style="font-size:20px;color:var(--color-text-primary);">inventory_2</span>
+                <div>
+                  <span style="font-size:12px;color:var(--color-text-secondary);display:block;">Export Target</span>
+                  <span style="font-family:var(--font-mono);font-size:13px;font-weight:600;color:var(--color-text-primary);">
+                    ${escapeHtml(activeProject.name)} / <span id="export-target-env-name">${escapeHtml(selectedEnv?.name || 'No environment selected')}</span>
+                  </span>
+                </div>
+              </div>
+              <div style="height:1px;width:100%;background:var(--color-border);"></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;">
+                <label for="export-source-env-select" style="color:var(--color-text-secondary);">Target Environment</label>
+                <select id="export-source-env-select" class="input-control" style="height:30px;font-size:12px;width:140px;" ${!environments.length ? 'disabled' : ''}>${environmentOptions}</select>
+              </div>
+            </div>
+
+            <div style="padding:.75rem 1rem;background:var(--color-canvas);border-radius:var(--radius-md);border:1px solid var(--color-border);display:flex;align-items:flex-start;gap:10px;">
+              <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-text-secondary);margin-top:1px;">lock</span>
+              <p style="font-size:12px;color:var(--color-text-secondary);line-height:1.4;margin:0;">Exported files contain decrypted secrets. Store and share them carefully.</p>
+            </div>
+
+            <div>
+              <label style="display:block;font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:6px;">Export Format</label>
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
+                <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--color-surface-container-lowest);border-radius:var(--radius-md);border:1px solid var(--color-border);cursor:pointer;font-size:13px;font-weight:500;color:var(--color-text-primary);">
+                  <span>Dotenv (.env)</span><input type="radio" name="export-format" value="dotenv" checked style="accent-color:#09090b;">
+                </label>
+                <label style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;background:var(--color-surface-container-lowest);border-radius:var(--radius-md);border:1px solid var(--color-border);cursor:pointer;font-size:13px;font-weight:500;color:var(--color-text-primary);">
+                  <span>JSON (.json)</span><input type="radio" name="export-format" value="json" style="accent-color:#09090b;">
+                </label>
+              </div>
+            </div>
+
+            <div style="padding-top:4px;">
+              <button id="btn-export-env" class="btn btn-primary" type="button" style="width:100%;height:38px;background:#09090b;color:#fff;border-radius:var(--radius-md);font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:center;gap:8px;" ${!environments.length ? 'disabled' : ''}>
+                <span class="material-symbols-outlined" style="font-size:18px;">download</span>
+                <span id="btn-export-text">Export Variables</span>
+              </button>
+            </div>
+          </section>
         </div>
-      </div>
-    </div>
-  `;
 
-  // Hook Step 1 File Upload & Parse
-  const fileInput = document.getElementById('import-file-input');
-  const textarea = document.getElementById('import-raw-textarea');
-  const envSelect = document.getElementById('import-dest-env-select');
+        <div id="import-preview-section"></div>
+      </div>`;
 
-  envSelect?.addEventListener('change', (e) => {
-    selectedEnvId = parseInt(e.target.value, 10);
-  });
+    hookEvents();
+  }
 
-  fileInput?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        textarea.value = event.target.result;
-      };
-      reader.readAsText(file);
-    }
-  });
+  function hookEvents() {
+    const tabUpload = document.getElementById('tab-upload');
+    const tabPaste = document.getElementById('tab-paste');
+    const uploadPanel = document.getElementById('upload-panel');
+    const pastePanel = document.getElementById('paste-panel');
+    const dropzoneBox = document.getElementById('dropzone-box');
+    const fileInput = document.getElementById('import-file-input');
+    const fileInfoPill = document.getElementById('file-info-pill');
+    const fileNameLabel = document.getElementById('file-name-label');
+    const fileSizeLabel = document.getElementById('file-size-label');
+    const textarea = document.getElementById('import-raw-textarea');
+    const envSelect = document.getElementById('import-dest-env-select');
+    const exportEnvSelect = document.getElementById('export-source-env-select');
+    const overwriteCheckbox = document.getElementById('overwrite-existing-checkbox');
+    const overwriteWarning = document.getElementById('overwrite-warning');
 
-  document.getElementById('btn-parse-env')?.addEventListener('click', async () => {
-    rawContent = textarea.value.trim();
-    if (!rawContent) {
-      window.showToast?.('Empty Content', 'Please paste or upload a .env file before parsing.', 'error');
-      return;
-    }
+    tabUpload?.addEventListener('click', () => {
+      activeInputMode = 'upload';
+      tabUpload.style.backgroundColor = 'var(--color-surface-container-lowest)';
+      tabUpload.style.color = 'var(--color-text-primary)';
+      tabPaste.style.backgroundColor = 'transparent';
+      tabPaste.style.color = 'var(--color-text-secondary)';
+      uploadPanel.style.display = 'flex';
+      pastePanel.style.display = 'none';
+    });
 
-    try {
-      window.showToast?.('Parsing .env', 'Checking syntax and existing environment keys...', 'info');
-      previewData = await previewEnvImport(activeProject.id, selectedEnvId, rawContent);
-      
-      if (!previewData.valid) {
-        window.showToast?.('Parser Error', previewData.errors?.join('; ') || 'Invalid syntax', 'error');
+    tabPaste?.addEventListener('click', () => {
+      activeInputMode = 'paste';
+      tabPaste.style.backgroundColor = 'var(--color-surface-container-lowest)';
+      tabPaste.style.color = 'var(--color-text-primary)';
+      tabUpload.style.backgroundColor = 'transparent';
+      tabUpload.style.color = 'var(--color-text-secondary)';
+      pastePanel.style.display = 'flex';
+      uploadPanel.style.display = 'none';
+    });
+
+    overwriteCheckbox?.addEventListener('change', () => {
+      overwriteWarning.style.display = overwriteCheckbox.checked ? 'block' : 'none';
+      if (previewData) renderPreviewTable();
+    });
+
+    envSelect?.addEventListener('change', event => {
+      selectedEnvId = Number(event.target.value);
+      selectedEnv = environments.find(env => env.id === selectedEnvId) || null;
+      previewData = null;
+      document.getElementById('import-preview-section').innerHTML = '';
+    });
+
+    exportEnvSelect?.addEventListener('change', event => {
+      const targetEnv = environments.find(env => env.id === Number(event.target.value));
+      const nameElement = document.getElementById('export-target-env-name');
+      if (nameElement && targetEnv) nameElement.textContent = targetEnv.name;
+    });
+
+    dropzoneBox?.addEventListener('click', event => {
+      if (event.target.closest('#btn-remove-file')) return;
+      fileInput?.click();
+    });
+
+    dropzoneBox?.addEventListener('dragover', event => {
+      event.preventDefault();
+      dropzoneBox.style.borderColor = 'var(--color-primary)';
+    });
+
+    dropzoneBox?.addEventListener('dragleave', () => {
+      dropzoneBox.style.borderColor = 'var(--color-border-strong)';
+    });
+
+    dropzoneBox?.addEventListener('drop', event => {
+      event.preventDefault();
+      dropzoneBox.style.borderColor = 'var(--color-border-strong)';
+      if (event.dataTransfer.files?.[0]) handleFile(event.dataTransfer.files[0]);
+    });
+
+    fileInput?.addEventListener('change', event => {
+      if (event.target.files?.[0]) handleFile(event.target.files[0]);
+    });
+
+    document.getElementById('btn-remove-file')?.addEventListener('click', event => {
+      event.stopPropagation();
+      rawContent = '';
+      previewData = null;
+      if (textarea) textarea.value = '';
+      if (fileInput) fileInput.value = '';
+      fileInfoPill.style.display = 'none';
+      document.getElementById('import-preview-section').innerHTML = '';
+    });
+
+    function handleFile(file) {
+      if (file.size > 512 * 1024) {
+        window.showToast?.('File Too Large', 'Choose a file smaller than 512 KB.', 'error');
         return;
       }
 
-      currentStep = 2;
-      updateStepperUI();
-      renderStep2Preview();
-    } catch (err) {
-      window.showToast?.('Parse Failed', err.message, 'error');
-    }
-  });
+      fileNameLabel.textContent = file.name;
+      fileSizeLabel.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
+      fileInfoPill.style.display = 'flex';
 
-  function updateStepperUI() {
-    for (let i = 1; i <= 4; i++) {
-      const item = document.getElementById(`step-nav-${i}`);
-      if (!item) continue;
-      if (i < currentStep) item.className = 'stepper-item completed';
-      else if (i === currentStep) item.className = 'stepper-item active';
-      else item.className = 'stepper-item upcoming';
+      const reader = new FileReader();
+
+      reader.onload = event => {
+        rawContent = String(event.target.result || '');
+        if (textarea) textarea.value = rawContent;
+        previewData = null;
+        document.getElementById('import-preview-section').innerHTML = '';
+      };
+
+      reader.onerror = () => {
+        window.showToast?.('File Read Failed', 'The selected file could not be read.', 'error');
+      };
+
+      reader.readAsText(file);
     }
+
+    document.getElementById('btn-preview-import')?.addEventListener('click', async () => {
+      if (!selectedEnvId) {
+        window.showToast?.('Environment Required', 'Select a target environment first.', 'error');
+        return;
+      }
+
+      if (activeInputMode === 'paste') rawContent = textarea?.value || '';
+
+      if (!rawContent.trim()) {
+        window.showToast?.('No Content', 'Select a .env file or paste content to preview.', 'error');
+        return;
+      }
+
+      const button = document.getElementById('btn-preview-import');
+
+      try {
+        button.disabled = true;
+        window.showToast?.('Parsing .env', 'Checking syntax and existing environment keys...', 'info');
+
+        previewData = await previewEnvImport(activeProject.id, selectedEnvId, rawContent);
+
+        if (!previewData.valid) {
+          window.showToast?.('Parser Error', previewData.errors?.join('; ') || 'Invalid syntax.', 'error');
+          return;
+        }
+
+        renderPreviewTable();
+      } catch (error) {
+        window.showToast?.('Preview Failed', error.message, 'error');
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-export-env')?.addEventListener('click', async () => {
+      const targetEnvId = Number(exportEnvSelect?.value || selectedEnvId);
+      const targetEnv = environments.find(env => env.id === targetEnvId) || selectedEnv;
+      const format = document.querySelector('input[name="export-format"]:checked')?.value || 'dotenv';
+      const button = document.getElementById('btn-export-env');
+      const buttonText = document.getElementById('btn-export-text');
+
+      if (!targetEnv) {
+        window.showToast?.('Environment Required', 'Select an environment to export.', 'error');
+        return;
+      }
+
+      try {
+        button.disabled = true;
+        buttonText.textContent = 'Decrypting & Exporting...';
+
+        const variables = await listVariables(activeProject.id, targetEnv.id);
+        if (!variables?.length) {
+          window.showToast?.('Export Unavailable', 'No variables exist in this environment.', 'warning');
+          return;
+        }
+
+        const decryptedVars = {};
+        for (const variable of variables) {
+          const result = await revealVariable(activeProject.id, targetEnv.id, variable.id);
+          decryptedVars[variable.key] = result.value;
+        }
+
+        let fileData;
+        let fileName;
+        let mimeType;
+
+        if (format === 'json') {
+          fileData = JSON.stringify(decryptedVars, null, 2);
+          fileName = `${safeFileName(targetEnv.name)}-env.json`;
+          mimeType = 'application/json;charset=utf-8';
+        } else {
+          fileData = Object.entries(decryptedVars)
+            .map(([key, value]) => `${key}=${formatEnvValue(value)}`)
+            .join('\n') + '\n';
+          fileName = `.env.${safeFileName(targetEnv.name)}`;
+          mimeType = 'text/plain;charset=utf-8';
+        }
+
+        const blob = new Blob([fileData], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        window.showToast?.('Export Successful', `Saved ${fileName}`, 'success');
+      } catch (error) {
+        window.showToast?.('Export Failed', error.message, 'error');
+      } finally {
+        button.disabled = false;
+        buttonText.textContent = 'Export Variables';
+      }
+    });
   }
 
-  function renderStep2Preview() {
-    const container = document.getElementById('import-step-container');
-    if (!container) return;
+  function renderPreviewTable() {
+    const previewSection = document.getElementById('import-preview-section');
+    if (!previewSection || !previewData) return;
 
-    const total = previewData.total || previewData.variables?.length || 0;
-    const newCount = previewData.new_count || 0;
-    const existingCount = previewData.existing_count || 0;
-    const restoreCount = previewData.restore_count || 0;
+    const variables = previewData.variables || [];
+    const total = previewData.total ?? variables.length;
+    const overwriteExisting =
+      document.getElementById('overwrite-existing-checkbox')?.checked === true;
 
-    container.innerHTML = `
-      <div style="display: flex; flex-direction: column; gap: var(--space-lg);">
-        <!-- 3. Conflict Resolution Bar & Policy Selector -->
-        <div class="table-surface-card" style="padding: var(--space-lg); gap: var(--space-md);">
-          <!-- Analysis Breakdown Badges -->
+    const countStatus = status => variables.filter(v => v.status === status).length;
+    const newCount = previewData.new_count ?? countStatus('new');
+    const updateCount = previewData.update_count ?? countStatus('update');
+    const unchangedCount = previewData.unchanged_count ??
+      (countStatus('unchanged') + countStatus('already_exists'));
+    const restoreCount = previewData.restore_count ?? countStatus('can_restore');
+
+    // Legacy "already_exists" responses are treated as conflicts.
+    const conflictCount = updateCount + countStatus('already_exists');
+    const canImport = total > 0 && (overwriteExisting || conflictCount === 0);
+
+    const rows = variables.map(variable => {
+      let label;
+      let badgeClass;
+
+      switch (variable.status) {
+        case 'update':
+          label = overwriteExisting ? 'Will update' : 'Overwrite required';
+          badgeClass = overwriteExisting ? 'badge-warning' : 'badge-error';
+          break;
+        case 'unchanged':
+        case 'already_exists':
+          label = 'Unchanged';
+          badgeClass = 'badge-code';
+          break;
+        case 'can_restore':
+          label = 'Will restore';
+          badgeClass = 'badge-warning';
+          break;
+        default:
+          label = 'New variable';
+          badgeClass = 'badge-prod';
+      }
+
+      return `
+        <tr style="border-bottom:1px solid var(--color-border);">
+          <td style="padding:10px 16px;font-family:var(--font-mono);font-weight:500;color:var(--color-text-primary);">${escapeHtml(variable.key)}</td>
+          <td style="padding:10px 16px;"><span class="badge ${badgeClass} badge-code">${label}</span></td>
+          <td style="padding:10px 16px;text-align:right;font-family:var(--font-mono);color:var(--color-text-muted);letter-spacing:.1em;user-select:none;">••••••••••••</td>
+        </tr>`;
+    }).join('');
+
+    previewSection.innerHTML = `
+      <div class="table-surface-card" style="border:1px solid var(--color-border);border-radius:var(--radius-lg);background:var(--color-surface-container-lowest);overflow:hidden;margin-top:1rem;">
+        <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--color-border);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem;background:var(--color-canvas);">
           <div>
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm);">
-              <span class="font-label-code-sm" style="text-transform: uppercase; color: var(--color-text-secondary); font-weight: 700;">
-                FILE ANALYSIS COMPOSITION
-              </span>
-              <span class="font-label-code-sm" style="color: var(--color-text-muted);">Engine: Strict-DotEnv-Parser</span>
-            </div>
-            <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
-              <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-primary); font-weight: 700; padding: 4px 10px;">
-                ${total} Variables Detected
-              </span>
-              <span class="badge badge-prod badge-code" style="padding: 4px 10px;">
-                <span class="material-symbols-outlined" style="font-size: 14px;">add_circle</span>
-                ${newCount} New Variables
-              </span>
-              ${existingCount > 0 ? `
-                <span class="badge badge-stg badge-code" style="padding: 4px 10px;">
-                  <span class="material-symbols-outlined" style="font-size: 14px;">warning</span>
-                  ${existingCount} Conflicting Overwrites
-                </span>
-              ` : ''}
-              ${restoreCount > 0 ? `
-                <span class="badge badge-dev badge-code" style="padding: 4px 10px;">
-                  <span class="material-symbols-outlined" style="font-size: 14px;">restore</span>
-                  ${restoreCount} Can Restore
-                </span>
-              ` : ''}
-            </div>
+            <h3 style="font-size:14px;font-weight:600;color:var(--color-text-primary);margin:0;">Import Preview (${total} keys found)</h3>
+            <p style="font-size:12px;color:var(--color-text-secondary);margin:4px 0 0;">
+              ${newCount} new · ${updateCount} changed · ${unchangedCount} unchanged · ${restoreCount} to restore
+            </p>
+            <p style="font-size:12px;color:var(--color-text-secondary);margin:4px 0 0;">
+              ${conflictCount
+        ? overwriteExisting
+          ? 'Changed existing values will be replaced after confirmation.'
+          : 'Enable overwrite to replace changed existing values.'
+        : 'No changed-value conflicts detected.'}
+            </p>
           </div>
-
-          <!-- Strategy Radios -->
-          <div style="background-color: var(--color-surface-container-low); padding: var(--space-md); border-radius: var(--radius-lg); border: 1px solid var(--color-border-subtle);">
-            <div style="margin-bottom: var(--space-sm);">
-              <h3 class="font-headline-sm" style="font-size: 15px;">Select Global Import Strategy</h3>
-              <p class="font-body-sm" style="color: var(--color-text-secondary);">Set how incoming variable keys interact with existing keys.</p>
-            </div>
-            <div class="radio-policy-grid">
-              <label class="radio-policy-card">
-                <input type="radio" name="conflict-strategy" value="overwrite" checked>
-                <div>
-                  <div class="radio-policy-title">Overwrite Conflicts</div>
-                  <div class="radio-policy-desc">Incoming values replace current keys in target environment automatically.</div>
-                </div>
-              </label>
-
-              <label class="radio-policy-card">
-                <input type="radio" name="conflict-strategy" value="preserve">
-                <div>
-                  <div class="radio-policy-title">Preserve Existing</div>
-                  <div class="radio-policy-desc">Skip incoming updates if the variable key already exists.</div>
-                </div>
-              </label>
-
-              <label class="radio-policy-card">
-                <input type="radio" name="conflict-strategy" value="manual">
-                <div>
-                  <div class="radio-policy-title">Manual Inspection</div>
-                  <div class="radio-policy-desc">Inspect and confirm each row individually in the table below.</div>
-                </div>
-              </label>
-            </div>
-          </div>
+          <span style="font-size:12px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--color-surface-container-lowest);border:1px solid var(--color-border);color:var(--color-text-secondary);">Validation: Passed</span>
         </div>
 
-        <!-- 4. Changeset Inspection Table -->
-        <div class="table-surface-card">
-          <div class="table-toolbar">
-            <div style="display: flex; align-items: center; gap: var(--space-sm);">
-              <h3 class="font-headline-sm">Changeset Inspection</h3>
-              <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary);">
-                ${total} keys ready
-              </span>
-            </div>
+        ${conflictCount && overwriteExisting ? `
+          <div style="padding:12px 16px;background:var(--color-canvas);border-bottom:1px solid var(--color-border);font-size:12px;line-height:1.5;color:var(--color-text-secondary);">
+            Previous values should be retained in variable version history. Unchanged values will not be modified.
+          </div>` : ''}
 
-            <div style="display: flex; align-items: center; gap: var(--space-md);">
-              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; cursor: pointer;">
-                <input id="mask-toggle-checkbox" type="checkbox" checked style="accent-color: var(--color-primary);">
-                <span>Mask Sensitive Secrets</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width: 15%;">Action / Type</th>
-                  <th style="width: 35%;">Variable Key</th>
-                  <th style="width: 25%;">Target Environment State</th>
-                  <th style="width: 25%; text-align: right;">Planned Action</th>
-                </tr>
-              </thead>
-              <tbody id="import-preview-tbody">
-                ${(previewData.variables || []).map(v => {
-                  let badge = '<span class="badge badge-prod badge-code">NEW</span>';
-                  let planned = '<span style="color: var(--color-prod-text); font-weight: 600;">Add Key</span>';
-                  if (v.status === 'already_exists') {
-                    badge = '<span class="badge badge-stg badge-code">OVERWRITE</span>';
-                    planned = '<span style="color: var(--color-stg-text); font-weight: 600;">Replace Value</span>';
-                  } else if (v.status === 'can_restore') {
-                    badge = '<span class="badge badge-dev badge-code">RESTORE</span>';
-                    planned = '<span style="color: var(--color-dev-text); font-weight: 600;">Undelete & Sync</span>';
-                  }
-
-                  return `
-                    <tr>
-                      <td>${badge}</td>
-                      <td>
-                        <span class="font-label-code-md" style="font-weight: 700; color: var(--color-primary);">${escapeHtml(v.key)}</span>
-                      </td>
-                      <td>
-                        <span style="font-size: 12px; color: var(--color-text-secondary);">
-                          ${v.status === 'already_exists' ? 'Currently exists (active)' : v.status === 'can_restore' ? 'Archived (deleted)' : 'Not in environment'}
-                        </span>
-                      </td>
-                      <td style="text-align: right;">${planned}</td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
+        <div class="table-wrapper" style="max-height:280px;overflow-y:auto;">
+          <table class="data-table" style="width:100%;border-collapse:collapse;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--color-border);background:var(--color-surface-container-low);font-size:11px;text-transform:uppercase;color:var(--color-text-secondary);letter-spacing:.04em;">
+                <th style="padding:8px 16px;text-align:left;">Key</th>
+                <th style="padding:8px 16px;text-align:left;">Action / Status</th>
+                <th style="padding:8px 16px;text-align:right;">Value (Masked)</th>
+              </tr>
+            </thead>
+            <tbody style="font-size:13px;">
+              ${rows || '<tr><td colspan="3" style="padding:16px;">No variables to import.</td></tr>'}
+            </tbody>
+          </table>
         </div>
 
-        <!-- 5. Security Notice & Execution Actions -->
-        <div class="security-banner">
-          <div class="security-banner-left">
-            <span class="material-symbols-outlined security-banner-icon" style="color: var(--color-prod);">enhanced_encryption</span>
-            <div>
-              <span class="security-banner-title">Zero-Knowledge Memory Pipeline</span>
-              <span class="security-banner-desc">
-                Secrets are encrypted via AES-256-GCM before writing to storage blocks. Environment files are purged from browser memory upon exit.
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Action Bar -->
-        <div style="background-color: var(--color-surface-container-lowest); border: 1px solid var(--color-border); border-radius: var(--radius-lg); padding: var(--space-md) var(--space-lg); display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow-sm);">
-          <button class="btn btn-secondary" id="btn-back-to-step1">
-            <span class="material-symbols-outlined">arrow_back</span>
-            <span>Back to Edit</span>
-          </button>
-
-          <div style="display: flex; gap: var(--space-sm);">
-            <button class="btn btn-secondary" onclick="window.location.hash='#variables'">Cancel</button>
-            <button id="btn-commit-import" class="btn btn-primary">
-              <span>Proceed to Import ${total} Variables</span>
-              <span class="material-symbols-outlined">arrow_forward</span>
+        <div style="padding:.875rem 1.25rem;border-top:1px solid var(--color-border);background:var(--color-canvas);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:1rem;">
+          <span style="font-size:12px;color:var(--color-text-secondary);">${total} variable(s) shown</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button id="btn-cancel-preview" class="btn btn-secondary" type="button" style="height:34px;padding:0 14px;font-size:13px;border-radius:var(--radius-md);">Cancel</button>
+            <button id="btn-confirm-import" class="btn btn-primary" type="button" ${canImport ? '' : 'disabled'} style="height:34px;padding:0 16px;background:#09090b;color:#fff;font-size:13px;font-weight:500;border-radius:var(--radius-md);display:flex;align-items:center;gap:6px;${canImport ? '' : 'opacity:.5;cursor:not-allowed;'}">
+              <span class="material-symbols-outlined" style="font-size:16px;">check</span>
+              <span>Confirm Import</span>
             </button>
           </div>
         </div>
-      </div>
-    `;
+      </div>`;
 
-    document.getElementById('btn-back-to-step1')?.addEventListener('click', () => {
-      currentStep = 1;
-      updateStepperUI();
-      renderImportExportView(container);
+    document.getElementById('btn-cancel-preview')?.addEventListener('click', () => {
+      previewSection.innerHTML = '';
     });
 
-    document.getElementById('btn-commit-import')?.addEventListener('click', async () => {
-      try {
-        window.showToast?.('Importing Variables', 'Writing encrypted secrets atomically...', 'info');
-        const res = await commitEnvImport(activeProject.id, selectedEnvId, rawContent, true);
-        window.showToast?.('Import Succeeded', res.message || `Imported ${res.imported_count || total} variables.`, 'success');
-        
-        currentStep = 4;
-        updateStepperUI();
+    document.getElementById('btn-confirm-import')?.addEventListener('click', async () => {
+      const confirmButton = document.getElementById('btn-confirm-import');
+      const shouldOverwrite =
+        document.getElementById('overwrite-existing-checkbox')?.checked === true;
 
-        container.innerHTML = `
-          <div class="empty-state-card" style="padding: var(--space-3xl); background: #FFFFFF;">
-            <div class="empty-state-icon" style="background-color: var(--color-prod-bg); color: var(--color-prod-text);">
+      if (conflictCount && !shouldOverwrite) {
+        window.showToast?.('Import Blocked', 'Changed existing variables were found. Enable overwrite to replace them.', 'error');
+        return;
+      }
+
+      if (shouldOverwrite && conflictCount) {
+        const confirmed = window.confirm(
+          `This import will replace ${conflictCount} existing variable(s). Previous values should remain in version history. Continue?`
+        );
+        if (!confirmed) return;
+      }
+
+      try {
+        confirmButton.disabled = true;
+        confirmButton.textContent = 'Importing...';
+
+        const result = await commitEnvImport(
+          activeProject.id,
+          selectedEnvId,
+          rawContent,
+          true,
+          shouldOverwrite
+        );
+
+        const processedCount = result.imported_count ?? total;
+        const unchangedResult = result.unchanged_count ?? unchangedCount;
+
+        window.showToast?.(
+          'Import Succeeded',
+          result.message || `Processed ${processedCount} variable(s).`,
+          'success'
+        );
+
+        previewSection.innerHTML = `
+          <div class="empty-state-card" style="padding:2.5rem;background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-lg);margin-top:1rem;">
+            <div class="empty-state-icon" style="background:var(--color-prod-bg);color:var(--color-prod-text);">
               <span class="material-symbols-outlined">check_circle</span>
             </div>
-            <h2 class="font-headline-lg" style="color: var(--color-primary);">Import Completed Successfully</h2>
-            <p class="font-body-md" style="color: var(--color-text-secondary); max-width: 440px;">
-              ${res.imported_count || total} environment variables have been encrypted and saved to your environment.
+            <h3 class="font-headline-md" style="margin:.5rem 0 .25rem;color:var(--color-text-primary);">Import Completed Successfully</h3>
+            <p class="font-body-sm" style="color:var(--color-text-secondary);max-width:440px;margin:0 auto 1rem;">
+              ${result.created_count ?? newCount} created · ${result.updated_count ?? updateCount} updated · ${unchangedResult} unchanged · ${result.restored_count ?? restoreCount} restored.
             </p>
-            <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-md);">
-              <button class="btn btn-primary" onclick="window.location.hash='#variables'">
-                <span>View in Variable Manager</span>
-                <span class="material-symbols-outlined">arrow_forward</span>
-              </button>
-            </div>
-          </div>
-        `;
-      } catch (err) {
-        window.showToast?.('Import Failed', err.message, 'error');
+            <button id="btn-view-variables" class="btn btn-primary" type="button" style="height:36px;padding:0 16px;background:#09090b;color:#fff;border-radius:var(--radius-md);">
+              <span>View in Variables</span>
+              <span class="material-symbols-outlined" style="font-size:16px;">arrow_forward</span>
+            </button>
+          </div>`;
+
+        document.getElementById('btn-view-variables')?.addEventListener('click', () => {
+          window.location.hash = '#variables';
+        });
+      } catch (error) {
+        window.showToast?.('Import Failed', error.message, 'error');
+        confirmButton.disabled = false;
+        confirmButton.innerHTML = `
+          <span class="material-symbols-outlined" style="font-size:16px;">check</span>
+          <span>Confirm Import</span>`;
       }
     });
   }
 }
 
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str)
+function formatEnvValue(value) {
+  const text = String(value ?? '');
+
+  if (text === '') return '""';
+
+  if (/[\s"'#]/.test(text)) {
+    return `"${text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\r?\n/g, '\\n')}"`;
+  }
+
+  return text;
+}
+
+function safeFileName(value) {
+  return String(value || 'environment')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'environment';
+}
+
+function escapeHtml(value) {
+  if (value == null) return '';
+
+  return String(value)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

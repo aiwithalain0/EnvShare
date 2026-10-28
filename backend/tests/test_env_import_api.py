@@ -1,15 +1,14 @@
-
+﻿
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
 from sqlalchemy.pool import StaticPool
 
 from database import Base, get_db
-from main import app
-from models import AuditEvent, Environment, Project, Variable, VariableVersion
 from encryption import decrypt_value
+from main import app
+from models import AuditEvent, Variable, VariableVersion
 
 
 @pytest.fixture
@@ -129,7 +128,7 @@ def test_preview_marks_existing_keys(client):
         for item in response.json()["variables"]
     }
     assert statuses == {
-        "EXISTING_KEY": "already_exists",
+        "EXISTING_KEY": "update",
         "NEW_KEY": "new",
     }
     assert "fake-replacement-value" not in response.text
@@ -277,36 +276,42 @@ def test_import_rejects_malformed_content(client):
 
 
 def test_import_preview_identifies_restorable_keys(client):
-    project_id, environment_id, base_url = setup_environment(client)
+    _, _, base_url = setup_environment(client)
 
-    # 1. Create an active variable
-    res_active = client.post(
+    active = client.post(
         base_url,
-        json={"key": "ACTIVE_KEY", "value": "secret-active", "is_sensitive": True},
+        json={
+            "key": "ACTIVE_KEY",
+            "value": "secret-active",
+            "is_sensitive": True,
+        },
     )
-    assert res_active.status_code == 201
+    assert active.status_code == 201
 
-    # 2. Create and soft-delete a variable
-    res_deleted = client.post(
+    deleted = client.post(
         base_url,
-        json={"key": "DELETED_KEY", "value": "secret-deleted", "is_sensitive": True},
+        json={
+            "key": "DELETED_KEY",
+            "value": "secret-deleted",
+            "is_sensitive": True,
+        },
     )
-    assert res_deleted.status_code == 201
-    deleted_id = res_deleted.json()["id"]
+    assert deleted.status_code == 201
+    deleted_id = deleted.json()["id"]
     assert client.delete(f"{base_url}/{deleted_id}").status_code == 204
 
-    # 3. Preview with active, deleted, and new keys
     secret_candidate = "preview-candidate-secret"
     response = client.post(
         f"{base_url}/import/preview",
         json={
             "content": (
-                f"ACTIVE_KEY=active-val\n"
+                "ACTIVE_KEY=active-val\n"
                 f"DELETED_KEY={secret_candidate}\n"
-                f"BRAND_NEW_KEY=brand-new-val\n"
+                "BRAND_NEW_KEY=brand-new-val\n"
             )
         },
     )
+
     assert response.status_code == 200
     data = response.json()
     assert data["valid"] is True
@@ -317,7 +322,7 @@ def test_import_preview_identifies_restorable_keys(client):
     assert secret_candidate not in response.text
 
     vars_by_key = {item["key"]: item for item in data["variables"]}
-    assert vars_by_key["ACTIVE_KEY"]["status"] == "already_exists"
+    assert vars_by_key["ACTIVE_KEY"]["status"] == "update"
     assert vars_by_key["ACTIVE_KEY"]["can_restore"] is False
     assert vars_by_key["DELETED_KEY"]["status"] == "can_restore"
     assert vars_by_key["DELETED_KEY"]["can_restore"] is True
@@ -325,36 +330,42 @@ def test_import_preview_identifies_restorable_keys(client):
     assert vars_by_key["BRAND_NEW_KEY"]["can_restore"] is False
 
 
-def test_confirmed_import_reactivates_deleted_records_and_preserves_history(client):
-    project_id, environment_id, base_url = setup_environment(client)
+def test_confirmed_import_reactivates_deleted_records_and_preserves_history(
+    client,
+):
+    _, _, base_url = setup_environment(client)
 
-    # 1. Create and delete a variable
     old_secret = "old-secret-before-delete"
     created = client.post(
         base_url,
-        json={"key": "RESTORE_ME", "value": old_secret, "is_sensitive": True},
+        json={
+            "key": "RESTORE_ME",
+            "value": old_secret,
+            "is_sensitive": True,
+        },
     )
     assert created.status_code == 201
     var_id = created.json()["id"]
     assert client.delete(f"{base_url}/{var_id}").status_code == 204
 
-    # 2. Confirmed import with the restorable key and a new key
     new_secret = "new-restored-secret"
     brand_new_secret = "brand-new-secret"
     import_res = client.post(
         f"{base_url}/import",
         json={
-            "content": f"RESTORE_ME={new_secret}\nANOTHER_NEW_KEY={brand_new_secret}\n",
+            "content": (
+                f"RESTORE_ME={new_secret}\n"
+                f"ANOTHER_NEW_KEY={brand_new_secret}\n"
+            ),
             "confirm_import": True,
         },
     )
+
     assert import_res.status_code == 200
-    import_data = import_res.json()
-    assert import_data["imported_count"] == 2
+    assert import_res.json()["imported_count"] == 2
     assert new_secret not in import_res.text
     assert brand_new_secret not in import_res.text
 
-    # 3. Listing shows both variables without secrets
     listing = client.get(base_url)
     assert listing.status_code == 200
     keys = [item["key"] for item in listing.json()]
@@ -363,64 +374,172 @@ def test_confirmed_import_reactivates_deleted_records_and_preserves_history(clie
     assert new_secret not in listing.text
     assert brand_new_secret not in listing.text
 
-    # 4. Reveal returns the new secret
     reveal = client.get(f"{base_url}/{var_id}/reveal")
     assert reveal.status_code == 200
     assert reveal.json()["value"] == new_secret
 
-    # 5. History retains old version and new version (total 2 versions)
     history = client.get(f"{base_url}/{var_id}/history")
     assert history.status_code == 200
     assert len(history.json()) == 2
     assert old_secret not in history.text
     assert new_secret not in history.text
 
-    # 6. Database checks
     db = next(app.dependency_overrides[get_db]())
     try:
-        var = db.get(Variable, var_id)
-        assert var is not None
-        assert var.is_deleted is False
-        assert var.deleted_at is None
-        assert var.value_ciphertext != new_secret
-        assert decrypt_value(var.value_ciphertext) == new_secret
+        variable = db.get(Variable, var_id)
+        assert variable is not None
+        assert variable.is_deleted is False
+        assert variable.deleted_at is None
+        assert variable.value_ciphertext != new_secret
+        assert decrypt_value(variable.value_ciphertext) == new_secret
     finally:
         db.close()
 
 
-def test_confirmed_import_with_active_conflict_does_not_reactivate_deleted(client):
-    project_id, environment_id, base_url = setup_environment(client)
+def test_confirmed_import_with_active_conflict_does_not_reactivate_deleted(
+    client,
+):
+    _, _, base_url = setup_environment(client)
 
-    # Create active variable
-    client.post(
+    active = client.post(
         base_url,
-        json={"key": "ACTIVE_CONFLICT", "value": "val1", "is_sensitive": True},
+        json={
+            "key": "ACTIVE_CONFLICT",
+            "value": "val1",
+            "is_sensitive": True,
+        },
     )
+    assert active.status_code == 201
 
-    # Create and delete variable
-    del_res = client.post(
+    deleted = client.post(
         base_url,
-        json={"key": "DELETED_NOT_RESTORED", "value": "val2", "is_sensitive": True},
+        json={
+            "key": "DELETED_NOT_RESTORED",
+            "value": "val2",
+            "is_sensitive": True,
+        },
     )
-    del_id = del_res.json()["id"]
-    client.delete(f"{base_url}/{del_id}")
+    assert deleted.status_code == 201
+    deleted_id = deleted.json()["id"]
+    assert client.delete(f"{base_url}/{deleted_id}").status_code == 204
 
-    # Import contains active conflict AND soft-deleted key
-    import_res = client.post(
+    response = client.post(
         f"{base_url}/import",
         json={
-            "content": "ACTIVE_CONFLICT=new1\nDELETED_NOT_RESTORED=new2\n",
+            "content": (
+                "ACTIVE_CONFLICT=new1\n"
+                "DELETED_NOT_RESTORED=new2\n"
+            ),
             "confirm_import": True,
         },
     )
-    assert import_res.status_code == 409
 
-    # Verify all-or-nothing: DELETED_NOT_RESTORED remains soft-deleted
+    assert response.status_code == 409
+
     db = next(app.dependency_overrides[get_db]())
     try:
-        var = db.get(Variable, del_id)
-        assert var.is_deleted is True
-        assert var.deleted_at is not None
+        variable = db.get(Variable, deleted_id)
+        assert variable is not None
+        assert variable.is_deleted is True
+        assert variable.deleted_at is not None
     finally:
         db.close()
+
+
+def test_import_overwrite_preserves_previous_value_in_history(client):
+    _, environment_id, base_url = setup_environment(client)
+
+    old_secret = "fake-original-secret"
+    new_secret = "fake-replacement-secret"
+
+    created = client.post(
+        base_url,
+        json={
+            "key": "OVERWRITE_TEST",
+            "value": old_secret,
+            "is_sensitive": True,
+        },
+    )
+    assert created.status_code == 201
+    variable_id = created.json()["id"]
+
+    response = client.post(
+        f"{base_url}/import",
+        json={
+            "content": f"OVERWRITE_TEST={new_secret}",
+            "confirm_import": True,
+            "overwrite_existing": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["imported_count"] == 1
+    assert old_secret not in response.text
+    assert new_secret not in response.text
+
+    reveal = client.get(f"{base_url}/{variable_id}/reveal")
+    assert reveal.status_code == 200
+    assert reveal.json()["value"] == new_secret
+
+    history = client.get(f"{base_url}/{variable_id}/history")
+    assert history.status_code == 200
+    assert len(history.json()) == 3
+    assert old_secret not in history.text
+    assert new_secret not in history.text
+
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        versions = db.scalars(
+            select(VariableVersion)
+            .where(VariableVersion.variable_id == variable_id)
+            .order_by(VariableVersion.id.asc())
+        ).all()
+
+        assert len(versions) == 3
+        assert decrypt_value(versions[0].value_ciphertext) == old_secret
+        assert decrypt_value(versions[1].value_ciphertext) == old_secret
+        assert decrypt_value(versions[2].value_ciphertext) == new_secret
+
+        variable = db.get(Variable, variable_id)
+        assert variable is not None
+        assert decrypt_value(variable.value_ciphertext) == new_secret
+    finally:
+        db.close()
+
+
+def test_import_overwrite_false_keeps_existing_value(client):
+    _, _, base_url = setup_environment(client)
+
+    old_secret = "fake-original-value"
+    new_secret = "fake-unapproved-value"
+
+    created = client.post(
+        base_url,
+        json={
+            "key": "PROTECTED_KEY",
+            "value": old_secret,
+            "is_sensitive": True,
+        },
+    )
+    assert created.status_code == 201
+    variable_id = created.json()["id"]
+
+    response = client.post(
+        f"{base_url}/import",
+        json={
+            "content": f"PROTECTED_KEY={new_secret}",
+            "confirm_import": True,
+            "overwrite_existing": False,
+        },
+    )
+
+    assert response.status_code == 409
+
+    reveal = client.get(f"{base_url}/{variable_id}/reveal")
+    assert reveal.status_code == 200
+    assert reveal.json()["value"] == old_secret
+
+    history = client.get(f"{base_url}/{variable_id}/history")
+    assert history.status_code == 200
+    assert len(history.json()) == 1
 

@@ -1,17 +1,18 @@
-/**
- * EnvShare Centralized API Client
- *
- * Security Constraints:
- * - Centralized base URL targeting backend (http://127.0.0.1:8000).
- * - Pulls JWT Bearer token dynamically from in-memory Store.
- * - Never prints, logs, or exposes secret payloads or tokens to console.
- * - Handles 401 Unauthorized by clearing in-memory session.
- * - Strictly respects verified FastAPI backend contracts.
- */
-
 import { store } from './store.js';
 
-export const API_BASE_URL = 'http://127.0.0.1:8000';
+const configuredApiUrl = window.ENVSHARE_API_URL;
+
+const isLocalDevelopment = ['localhost', '127.0.0.1'].includes(
+  window.location.hostname
+);
+
+export const API_BASE_URL = (
+  typeof configuredApiUrl === 'string' && configuredApiUrl.trim()
+    ? configuredApiUrl.trim()
+    : isLocalDevelopment
+      ? `http://${window.location.hostname}:8000`
+      : ''
+).replace(/\/+$/, '');
 
 export class ApiError extends Error {
   constructor(message, status = 0, details = null) {
@@ -22,294 +23,245 @@ export class ApiError extends Error {
   }
 }
 
-/**
- * Core HTTP Request Wrapper
- * @param {string} endpoint - Path relative to base URL, e.g. '/auth/login'
- * @param {object} options - Fetch options (method, headers, body)
- * @returns {Promise<any>}
- */
-export async function apiRequest(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
-
-  const headers = new Headers(options.headers || {});
-
-  // Set standard headers
-  if (!headers.has('Content-Type') && options.body && typeof options.body === 'string') {
-    headers.set('Content-Type', 'application/json');
-  }
-
-  // Inject Bearer token from in-memory store if present
-  const token = store.getAuthToken();
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
-  }
-
-  const config = {
-    ...options,
-    headers,
-  };
-
-  let response;
-  try {
-    response = await fetch(url, config);
-  } catch (networkError) {
+async function apiRequest(endpoint, options = {}) {
+  if (!API_BASE_URL) {
     throw new ApiError(
-      'Unable to connect to the EnvShare backend server. Verify the server is running on port 8000.',
-      0,
-      networkError.message
+      'Backend URL is not configured. Please configure ENVSHARE_API_URL.',
+      0
     );
   }
 
-  // Handle 204 No Content
+  const token = store.getAuthToken();
+  const headers = new Headers(options.headers || {});
+
+  if (options.body && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const url = `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+
+  let response;
+
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    throw new ApiError(
+      'Unable to connect to the EnvShare backend. Check that the backend is running.',
+      0,
+      error
+    );
+  }
+
   if (response.status === 204) {
     return null;
   }
 
-  // Parse JSON response body if present
+  const contentType = response.headers.get('content-type') || '';
   let data = null;
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    try {
-      data = await response.json();
-    } catch {
-      data = null;
-    }
+
+  if (contentType.includes('application/json')) {
+    data = await response.json();
   } else {
-    try {
-      const text = await response.text();
-      data = text ? { detail: text } : null;
-    } catch {
-      data = null;
+    const text = await response.text();
+    data = text ? { detail: text } : null;
+  }
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      store.clearAuthToken();
     }
+
+    const message =
+      data?.detail ||
+      data?.message ||
+      `Request failed with status ${response.status}.`;
+
+    throw new ApiError(message, response.status, data);
   }
 
-  // Handle successful responses (200 - 299)
-  if (response.ok) {
-    return data;
-  }
-
-  // Handle Unauthorized (401)
-  if (response.status === 401) {
-    store.clearAuth();
-    const errorMessage = data?.detail || 'Authentication required or session expired.';
-    throw new ApiError(errorMessage, 401, data);
-  }
-
-  // Handle other HTTP errors with safe message formatting
-  let errorMessage = 'An unexpected server error occurred.';
-  if (data?.detail) {
-    if (typeof data.detail === 'string') {
-      errorMessage = data.detail;
-    } else if (Array.isArray(data.detail)) {
-      // Pydantic validation error array
-      errorMessage = data.detail.map(e => e.msg || e.message || 'Validation error').join('; ');
-    } else if (typeof data.detail === 'object' && data.detail.message) {
-      errorMessage = data.detail.message;
-    }
-  } else if (data?.message) {
-    errorMessage = data.message;
-  }
-
-  throw new ApiError(errorMessage, response.status, data);
+  return data;
 }
 
-/**
- * Health check helper
- * Endpoint: GET /health
- */
 export async function checkBackendHealth() {
-  return apiRequest('/health', { method: 'GET' });
+  return apiRequest('/health');
 }
 
-/**
- * Register a new user
- * Endpoint: POST /auth/register
- * Payload: { email: str, password: str }
- */
-export async function registerUser(email, password) {
+export async function registerUser(userData) {
   return apiRequest('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(userData),
   });
 }
 
-/**
- * Log in an existing user
- * Endpoint: POST /auth/login
- * Payload: { email: str, password: str }
- */
-export async function loginUser(email, password) {
+export async function loginUser(credentials) {
   return apiRequest('/auth/login', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(credentials),
   });
 }
 
-/* ==========================================================================
-   Project API Endpoints
-   ========================================================================== */
-
-/**
- * List projects accessible by current user
- * Endpoint: GET /projects
- */
 export async function listProjects() {
-  return apiRequest('/projects', { method: 'GET' });
+  return apiRequest('/projects');
 }
 
-/**
- * Create a new project
- * Endpoint: POST /projects
- * Payload: { name: str }
- */
-export async function createProject(nameOrObj) {
-  const name = typeof nameOrObj === 'string' ? nameOrObj : (nameOrObj?.name || '');
+export async function createProject(projectData) {
   return apiRequest('/projects', {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(projectData),
   });
 }
 
-/**
- * Get audit logs for a project (Admin clearance required)
- * Endpoint: GET /projects/{projectId}/audit-logs?limit={limit}
- */
-export async function getProjectAuditLogs(projectId, limit = 50) {
-  return apiRequest(`/projects/${projectId}/audit-logs?limit=${encodeURIComponent(limit)}`, {
-    method: 'GET',
+export async function getProjectAuditLogs(projectId) {
+  return apiRequest(`/projects/${projectId}/audit-logs`);
+}
+
+export async function deleteProject(projectId) {
+  return apiRequest(`/projects/${projectId}`, {
+    method: 'DELETE',
   });
 }
 
-/* ==========================================================================
-   Environment API Endpoints
-   ========================================================================== */
-
-/**
- * List environments for a project
- * Endpoint: GET /projects/{projectId}/environments
- */
 export async function listEnvironments(projectId) {
-  return apiRequest(`/projects/${projectId}/environments`, { method: 'GET' });
+  return apiRequest(`/projects/${projectId}/environments`);
 }
 
-/**
- * Create an environment for a project
- * Endpoint: POST /projects/{projectId}/environments
- * Payload: { name: str }
- */
-export async function createEnvironment(projectId, name) {
+export async function createEnvironment(projectId, environmentData) {
   return apiRequest(`/projects/${projectId}/environments`, {
     method: 'POST',
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(environmentData),
   });
 }
 
-/* ==========================================================================
-   Variable API Endpoints
-   ========================================================================== */
+export async function deleteEnvironment(projectId, environmentId) {
+  return apiRequest(
+    `/projects/${projectId}/environments/${environmentId}`,
+    {
+      method: 'DELETE',
+    }
+  );
+}
 
-/**
- * List active variables in an environment
- * Endpoint: GET /projects/{projectId}/environments/{environmentId}/variables
- */
 export async function listVariables(projectId, environmentId) {
   return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/variables`,
-    { method: 'GET' }
+    `/projects/${projectId}/environments/${environmentId}/variables`
   );
 }
 
-/**
- * Create a variable
- * Endpoint: POST /projects/{projectId}/environments/{environmentId}/variables
- * Payload: { key: str, value: str, is_sensitive: bool }
- */
-export async function createVariable(projectId, environmentId, key, value, isSensitive = true) {
+export async function createVariable(
+  projectId,
+  environmentId,
+  variableData
+) {
   return apiRequest(
     `/projects/${projectId}/environments/${environmentId}/variables`,
     {
       method: 'POST',
-      body: JSON.stringify({ key, value, is_sensitive: isSensitive }),
+      body: JSON.stringify(variableData),
     }
   );
 }
 
-/**
- * Reveal plaintext variable value (Decrypted server-side, recorded in audit log)
- * Endpoint: GET /projects/{projectId}/environments/{environmentId}/variables/{variableId}/reveal
- */
-export async function revealVariable(projectId, environmentId, variableId) {
-  return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}/reveal`,
-    { method: 'GET' }
-  );
+export async function revealVariable(projectId, variableId) {
+  return apiRequest(`/projects/${projectId}/variables/${variableId}/reveal`, {
+    method: 'POST',
+  });
 }
 
-/**
- * Update an existing variable value
- * Endpoint: PUT /projects/{projectId}/environments/{environmentId}/variables/{variableId}
- * Payload: { value: str, is_sensitive: bool }
- */
-export async function updateVariable(projectId, environmentId, variableId, value, isSensitive = true) {
-  return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}`,
-    {
-      method: 'PUT',
-      body: JSON.stringify({ value, is_sensitive: isSensitive }),
-    }
-  );
+export async function updateVariable(projectId, variableId, variableData) {
+  return apiRequest(`/projects/${projectId}/variables/${variableId}`, {
+    method: 'PUT',
+    body: JSON.stringify(variableData),
+  });
 }
 
-/**
- * Delete a variable (Soft-delete with audit event)
- * Endpoint: DELETE /projects/{projectId}/environments/{environmentId}/variables/{variableId}
- */
-export async function deleteVariable(projectId, environmentId, variableId) {
-  return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}`,
-    { method: 'DELETE' }
-  );
+export async function deleteVariable(projectId, variableId) {
+  return apiRequest(`/projects/${projectId}/variables/${variableId}`, {
+    method: 'DELETE',
+  });
 }
 
-/**
- * Get variable version history
- * Endpoint: GET /projects/{projectId}/environments/{environmentId}/variables/{variableId}/history
- */
-export async function getVariableHistory(projectId, environmentId, variableId) {
-  return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}/history`,
-    { method: 'GET' }
-  );
+export async function getVariableHistory(projectId, variableId) {
+  return apiRequest(`/projects/${projectId}/variables/${variableId}/history`);
 }
 
-/**
- * Preview .env import content without writing to storage
- * Endpoint: POST /projects/{projectId}/environments/{environmentId}/variables/import/preview
- * Payload: { content: str }
- */
-export async function previewEnvImport(projectId, environmentId, content) {
+export async function revealVariableHistory(
+  projectId,
+  variableId,
+  versionId
+) {
   return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/variables/import/preview`,
+    `/projects/${projectId}/variables/${variableId}/history/${versionId}/reveal`,
     {
       method: 'POST',
-      body: JSON.stringify({ content }),
     }
   );
 }
 
-/**
- * Commit batch .env import content to environment
- * Endpoint: POST /projects/{projectId}/environments/{environmentId}/variables/import
- * Payload: { content: str, confirm_import: bool }
- */
-export async function commitEnvImport(projectId, environmentId, content, confirmImport = true) {
+export async function previewEnvImport(
+  projectId,
+  environmentId,
+  importData
+) {
   return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/variables/import`,
+    `/projects/${projectId}/environments/${environmentId}/import/preview`,
     {
       method: 'POST',
-      body: JSON.stringify({ content, confirm_import: confirmImport }),
+      body: JSON.stringify(importData),
     }
   );
 }
 
+export async function commitEnvImport(
+  projectId,
+  environmentId,
+  importData
+) {
+  return apiRequest(
+    `/projects/${projectId}/environments/${environmentId}/import`,
+    {
+      method: 'POST',
+      body: JSON.stringify(importData),
+    }
+  );
+}
 
+export async function listProjectMembers(projectId) {
+  return apiRequest(`/projects/${projectId}/members`);
+}
+
+export async function removeProjectMember(projectId, memberId) {
+  return apiRequest(`/projects/${projectId}/members/${memberId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function createInviteCode(projectId, inviteData) {
+  return apiRequest(`/projects/${projectId}/invites`, {
+    method: 'POST',
+    body: JSON.stringify(inviteData),
+  });
+}
+
+export async function listInviteCodes(projectId) {
+  return apiRequest(`/projects/${projectId}/invites`);
+}
+
+export async function revokeInviteCode(projectId, inviteId) {
+  return apiRequest(`/projects/${projectId}/invites/${inviteId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function joinProjectWithCode(inviteCode) {
+  return apiRequest('/projects/join', {
+    method: 'POST',
+    body: JSON.stringify({ code: inviteCode }),
+  });
+}

@@ -1,6 +1,6 @@
 /**
  * EnvShare Audit Logs & History View
- * Extracted from Google Stitch Project 7000277523774803089
+ * Extracted and aligned with Google Stitch design (envshare_audit_logs)
  */
 
 import { store } from '../store.js';
@@ -8,131 +8,172 @@ import { listProjects, getProjectAuditLogs } from '../api.js';
 
 export async function renderAuditLogsView(container) {
   const state = store.getState();
+  let projects = state.projects.list;
   let activeProject = state.projects.activeProject;
 
-  if (!activeProject) {
+  if (!projects || projects.length === 0) {
     try {
-      const projects = await listProjects();
+      projects = await listProjects();
       store.setProjects(projects);
-      if (projects.length > 0) {
-        activeProject = projects[0];
-        store.setActiveProject(activeProject);
-      }
-    } catch {}
+    } catch {
+      projects = [];
+    }
+  }
+
+  if (!activeProject && projects.length > 0) {
+    activeProject = projects[0];
+    store.setActiveProject(activeProject);
   }
 
   if (!activeProject) {
     container.innerHTML = `
-      <div class="empty-state-card">
-        <h2 class="font-headline-md">No Project Selected</h2>
-        <p class="font-body-sm" style="color: var(--color-text-secondary);">Select a project first to inspect audit events.</p>
+      <div class="empty-state-card" style="padding: 3rem 1rem;">
+        <div class="empty-state-icon">
+          <span class="material-symbols-outlined">history_toggle_off</span>
+        </div>
+        <h2 class="font-headline-md" style="margin: 0.5rem 0 0.25rem 0;">No Project Selected</h2>
+        <p class="font-body-sm" style="color: var(--color-text-secondary); max-width: 320px; margin: 0 auto 1rem auto;">
+          Select a project first to inspect recorded audit events.
+        </p>
       </div>
     `;
     return;
   }
 
   container.innerHTML = `
-    <!-- Header Section -->
-    <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
-      <div style="display: flex; items-center; gap: var(--space-xs); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--color-text-secondary); letter-spacing: 0.05em;">
-        <span>Security & History</span>
-        <span>/</span>
-        <span>SOC2 Verification Trail</span>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--space-md);">
-        <div>
-          <h1 class="font-display-lg">Audit Logs</h1>
-          <p class="font-body-md" style="color: var(--color-text-secondary); max-width: 680px; margin-top: 2px;">
-            Immutable cryptographic audit trail tracking all secret creations, reveals, updates, and environment changes.
-          </p>
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Header Section -->
+      <div style="display: flex; flex-direction: column; gap: 0.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; color: var(--color-text-secondary); letter-spacing: 0.05em;">
+          <span>Security & Compliance</span>
+          <span>/</span>
+          <span>Audit Logs</span>
         </div>
-        <div style="display: flex; align-items: center; gap: var(--space-sm);">
-          <button id="btn-refresh-audit" class="btn btn-secondary btn-icon" title="Refresh audit log">
-            <span class="material-symbols-outlined">refresh</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Security Guarantee Banner -->
-    <div class="security-banner">
-      <div class="security-banner-left">
-        <span class="material-symbols-outlined security-banner-icon" style="color: var(--color-prod);">verified_user</span>
-        <div>
-          <span class="security-banner-title">Immutable Append-Only Audit Stream</span>
-          <span class="security-banner-desc">Every reveal, decryption, and parameter change is signed and recorded server-side with user timestamps.</span>
-        </div>
-      </div>
-      <span class="badge badge-prod badge-code">SOC2 Compliant</span>
-    </div>
-
-    <!-- Main Table Surface Card -->
-    <div class="table-surface-card">
-      <div class="table-toolbar">
-        <div style="display: flex; align-items: center; gap: var(--space-sm);">
-          <h2 class="font-headline-sm">Recorded Events</h2>
-          <span id="audit-count-badge" class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary);">
-            Loading...
-          </span>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: var(--space-sm);">
-          <div class="filter-chip-group">
-            <button class="filter-chip is-active" data-filter="all">All Events</button>
-            <button class="filter-chip" data-filter="reveal">Reveals</button>
-            <button class="filter-chip" data-filter="mutate">Mutations</button>
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
+          <div>
+            <h1 class="font-headline-lg" style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-text-primary);">Audit Logs</h1>
+            <p class="font-body-sm" style="margin-top: 4px; color: var(--color-text-secondary);">
+              Review recorded mutations and secret revelations across your projects.
+            </p>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button id="btn-refresh-audit" class="btn btn-secondary btn-icon" title="Refresh audit log" style="height: 34px; width: 34px;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+            </button>
           </div>
         </div>
       </div>
 
-      <!-- Desktop Table -->
-      <div class="table-wrapper data-table-desktop">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width: 25%;">Action</th>
-              <th style="width: 20%;">Resource</th>
-              <th style="width: 15%;">Actor</th>
-              <th style="width: 25%;">Event Metadata</th>
-              <th style="width: 15%; text-align: right;">Timestamp</th>
-            </tr>
-          </thead>
-          <tbody id="audit-table-body">
-            <tr>
-              <td colspan="5" style="text-align: center; padding: var(--space-xl);">
-                <div class="spinner"></div>
-                <div style="margin-top: 8px; color: var(--color-text-secondary);">Loading audit stream...</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <!-- Filter Controls Bar (Stitch Design) -->
+      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; flex: 1;">
+          <!-- Search input -->
+          <div style="position: relative; width: 100%; max-width: 280px;">
+            <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 9px; font-size: 16px; color: var(--color-text-muted);">search</span>
+            <input id="audit-search" type="text" class="input-control" placeholder="Search audit logs…" style="height: 34px; padding-left: 32px; font-size: 13px; border-radius: var(--radius-md);">
+          </div>
+
+          <!-- Project Filter -->
+          <div style="position: relative;">
+            <select id="project-filter" class="input-control" style="height: 34px; font-size: 13px; padding-right: 28px; border-radius: var(--radius-md); cursor: pointer;">
+              ${projects.map(p => `
+                <option value="${p.id}" ${p.id === activeProject.id ? 'selected' : ''}>${escapeHtml(p.name)}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <!-- Action Filter -->
+          <div style="position: relative;">
+            <select id="action-filter" class="input-control" style="height: 34px; font-size: 13px; padding-right: 28px; border-radius: var(--radius-md); cursor: pointer;">
+              <option value="all">All Action Types</option>
+              <option value="create">Creations</option>
+              <option value="update">Updates</option>
+              <option value="reveal">Reveals</option>
+              <option value="delete">Deletions</option>
+              <option value="import">Imports</option>
+            </select>
+          </div>
+        </div>
+
+        <span id="audit-count-badge" class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary); font-size: 11px; padding: 4px 8px;">
+          Loading...
+        </span>
       </div>
 
-      <!-- Mobile Card List -->
-      <div class="mobile-card-list" id="audit-mobile-card-list">
-        <!-- Populated via JS -->
+      <!-- Audit Logs Table Container -->
+      <div class="table-surface-card" style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); background-color: var(--color-surface-container-lowest); overflow: hidden;">
+        <div class="table-wrapper data-table-desktop">
+          <table class="data-table" style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="border-bottom: 1px solid var(--color-border); background-color: var(--color-surface-container-low); font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.04em;">
+                <th style="padding: 10px 16px; text-align: left; width: 35%;">Action</th>
+                <th style="padding: 10px 16px; text-align: left; width: 25%;">Project / Environment</th>
+                <th style="padding: 10px 16px; text-align: left; width: 20%;">Actor</th>
+                <th style="padding: 10px 16px; text-align: right; width: 20%;">Date & Time (UTC)</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body" style="font-size: 13px;">
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 2.5rem;">
+                  <div class="spinner"></div>
+                  <div style="margin-top: 8px; color: var(--color-text-secondary); font-size: 13px;">Loading audit stream...</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Card List -->
+        <div class="mobile-card-list" id="audit-mobile-card-list" style="padding: 0.5rem;">
+          <!-- Populated via JS -->
+        </div>
       </div>
     </div>
   `;
 
   let currentLogs = [];
+  let searchTerm = '';
+  let selectedAction = 'all';
 
   async function loadAuditLogs() {
     try {
       currentLogs = await getProjectAuditLogs(activeProject.id, 50);
       store.setAuditLogs(currentLogs);
 
-      document.getElementById('audit-count-badge').textContent = `${currentLogs.length} Events`;
-      renderAuditRows(currentLogs);
+      const countBadge = document.getElementById('audit-count-badge');
+      if (countBadge) countBadge.textContent = `${currentLogs.length} Events`;
+
+      applyFilters();
     } catch (err) {
-      document.getElementById('audit-table-body').innerHTML = `
-        <tr>
-          <td colspan="5" style="text-align: center; padding: var(--space-xl); color: var(--color-error);">
-            Failed to load audit logs: ${err.message}
-          </td>
-        </tr>
-      `;
+      const tbody = document.getElementById('audit-table-body');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-error);">
+              Failed to load audit logs: ${err.message}
+            </td>
+          </tr>
+        `;
+      }
     }
+  }
+
+  function applyFilters() {
+    let filtered = currentLogs;
+
+    if (selectedAction !== 'all') {
+      filtered = filtered.filter(e => (e.action || '').toLowerCase().includes(selectedAction.toLowerCase()));
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(e => {
+        const act = (e.action || '').toLowerCase();
+        const key = (e.event_metadata?.key || '').toLowerCase();
+        return act.includes(searchTerm) || key.includes(searchTerm);
+      });
+    }
+
+    renderAuditRows(filtered);
   }
 
   function renderAuditRows(logs) {
@@ -144,78 +185,89 @@ export async function renderAuditLogsView(container) {
     if (!logs || logs.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="5" style="text-align: center; padding: var(--space-2xl);">
+          <td colspan="4" style="text-align: center; padding: 3rem 1rem;">
             <div class="empty-state-card" style="border: none; padding: 0;">
               <span class="material-symbols-outlined" style="font-size: 32px; color: var(--color-text-muted);">history_edu</span>
-              <h3 class="font-headline-sm" style="margin-top: 8px;">No Audit Events Recorded</h3>
-              <p class="font-body-sm" style="color: var(--color-text-secondary);">Audit records will populate as secrets are read or modified.</p>
+              <h3 class="font-headline-sm" style="margin: 0.5rem 0 0.25rem 0;">No Audit Events</h3>
+              <p class="font-body-sm" style="color: var(--color-text-secondary); max-width: 320px; margin: 0 auto;">
+                ${searchTerm || selectedAction !== 'all' ? 'No events matched your filter criteria.' : 'Audit events will populate as variables are added or revealed.'}
+              </p>
             </div>
           </td>
         </tr>
       `;
-      mobileList.innerHTML = `<div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">No events found.</div>`;
+      mobileList.innerHTML = `<div style="text-align: center; padding: 1.5rem; color: var(--color-text-secondary); font-size: 13px;">No events found.</div>`;
       return;
     }
 
     tbody.innerHTML = logs.map(event => {
-      let badgeClass = 'badge-code';
-      let badgeBg = 'var(--color-surface-container)';
-      let badgeColor = 'var(--color-text-primary)';
-
-      if (event.action.includes('revealed')) {
-        badgeBg = 'var(--color-stg-bg)';
-        badgeColor = 'var(--color-stg-text)';
-      } else if (event.action.includes('created') || event.action.includes('imported')) {
-        badgeBg = 'var(--color-prod-bg)';
-        badgeColor = 'var(--color-prod-text)';
-      } else if (event.action.includes('deleted')) {
-        badgeBg = 'var(--color-error-bg)';
-        badgeColor = 'var(--color-error-text)';
-      }
-
-      const metaStr = event.event_metadata ? JSON.stringify(event.event_metadata) : '{}';
+      const varKey = event.event_metadata?.key || '';
+      const dateUtc = event.created_at ? new Date(event.created_at).toUTCString() : 'Recent';
 
       return `
-        <tr>
-          <td>
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="badge ${badgeClass}" style="background-color: ${badgeBg}; color: ${badgeColor}; font-weight: 700;">
-                ${escapeHtml(event.action)}
-              </span>
+        <tr style="border-bottom: 1px solid var(--color-border); transition: background-color var(--transition-fast);">
+          <td style="padding: 10px 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-weight: 500; color: var(--color-text-primary);">${escapeHtml(event.action)}</span>
+              ${varKey ? `<span style="color: var(--color-text-muted);">·</span><code style="font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--color-text-primary); padding: 2px 6px; border-radius: 4px; background-color: var(--color-canvas); border: 1px solid var(--color-border);">${escapeHtml(varKey)}</code>` : ''}
             </div>
           </td>
-          <td>
-            <span class="font-label-code-sm" style="color: var(--color-text-secondary);">${escapeHtml(event.resource_type || 'project')}:${event.resource_id || '-'}</span>
+          <td style="padding: 10px 16px;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <span style="font-family: var(--font-mono); font-size: 12px; font-weight: 500; color: var(--color-text-primary);">${escapeHtml(activeProject.name)}</span>
+              <span style="color: var(--color-border-strong);">/</span>
+              <span style="font-size: 12px; color: var(--color-text-secondary);">${escapeHtml(event.event_metadata?.environment_name || 'production')}</span>
+            </div>
           </td>
-          <td>
-            <span class="font-label-code-sm" style="font-weight: 500; color: var(--color-text-primary);">User #${event.user_id}</span>
+          <td style="padding: 10px 16px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 13px; font-weight: 500; color: var(--color-text-primary);">User #${event.user_id}</span>
+            </div>
           </td>
-          <td>
-            <code style="font-size: 11px; max-width: 320px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-              ${escapeHtml(metaStr)}
-            </code>
-          </td>
-          <td style="text-align: right;">
-            <span class="font-label-code-sm" style="color: var(--color-text-secondary);">
-              ${new Date(event.created_at).toLocaleString()}
-            </span>
+          <td style="padding: 10px 16px; text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary); white-space: nowrap;">
+            ${dateUtc}
           </td>
         </tr>
       `;
     }).join('');
 
-    mobileList.innerHTML = logs.map(event => `
-      <div class="mobile-data-card">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <span class="font-label-code-sm" style="font-weight: 700; color: var(--color-primary);">${escapeHtml(event.action)}</span>
-          <span style="font-size: 10px; color: var(--color-text-secondary);">${new Date(event.created_at).toLocaleDateString()}</span>
+    mobileList.innerHTML = logs.map(event => {
+      const varKey = event.event_metadata?.key || '';
+      return `
+        <div class="mobile-data-card" style="padding: 10px; border-bottom: 1px solid var(--color-border);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 600; font-size: 13px; color: var(--color-text-primary);">${escapeHtml(event.action)}</span>
+            <span style="font-size: 10px; font-family: var(--font-mono); color: var(--color-text-muted);">${event.created_at ? new Date(event.created_at).toLocaleDateString() : ''}</span>
+          </div>
+          ${varKey ? `<div style="margin-top: 4px;"><code style="font-family: var(--font-mono); font-size: 11px; padding: 2px 6px; border-radius: 4px; background-color: var(--color-canvas);">${escapeHtml(varKey)}</code></div>` : ''}
+          <div style="font-size: 11px; color: var(--color-text-secondary); margin-top: 4px;">
+            Actor: User #${event.user_id} • ${activeProject.name}
+          </div>
         </div>
-        <div style="font-size: 11px; font-family: var(--font-mono); color: var(--color-text-secondary);">
-          Actor: User #${event.user_id} • ${event.resource_type || 'project'}:${event.resource_id || '-'}
-        </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
   }
+
+  // Hook Search and Select Filters
+  document.getElementById('audit-search')?.addEventListener('input', (e) => {
+    searchTerm = e.target.value.toLowerCase().trim();
+    applyFilters();
+  });
+
+  document.getElementById('action-filter')?.addEventListener('change', (e) => {
+    selectedAction = e.target.value;
+    applyFilters();
+  });
+
+  document.getElementById('project-filter')?.addEventListener('change', (e) => {
+    const pId = parseInt(e.target.value, 10);
+    const proj = projects.find(p => p.id === pId);
+    if (proj) {
+      activeProject = proj;
+      store.setActiveProject(proj);
+      loadAuditLogs();
+    }
+  });
 
   document.getElementById('btn-refresh-audit')?.addEventListener('click', loadAuditLogs);
 

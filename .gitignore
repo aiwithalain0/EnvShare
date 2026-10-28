@@ -31,3 +31,29 @@
 *.log
 .DS_Store
 Thumbs.db
+
+# Database backups and migration copies
+*.db
+*.db-*
+*.bak
+*.backup
+*.old
+
+# Frontend backups
+/frontend_backup_*/
+
+*.rbac-backup
+
+*step3-backup
+
+
+# Local AI agent configuration
+/.agent/
+/.agents/
+/.gemini/
+/.gsd/
+
+# Local exports and temporary backups
+/stitch-export/
+backend/*_before_snapshots_*.py
+backend/*.history-reveal-backup

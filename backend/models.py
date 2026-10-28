@@ -55,6 +55,9 @@ class Project(Base):
     environments: Mapped[list["Environment"]] = relationship(
         back_populates="project", cascade="all, delete-orphan"
     )
+    invite_codes: Mapped[list["InviteCode"]] = relationship(
+        back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class ProjectMember(Base):
@@ -79,6 +82,38 @@ class ProjectMember(Base):
 
     user: Mapped["User"] = relationship(back_populates="memberships")
     project: Mapped["Project"] = relationship(back_populates="members")
+
+
+class InviteCode(Base):
+    __tablename__ = "invite_codes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    project_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id"), nullable=False, index=True
+    )
+    code: Mapped[str] = mapped_column(
+        String(64), unique=True, index=True, nullable=False
+    )
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False
+    )
+    role: Mapped[str] = mapped_column(
+        String(20), default="member", nullable=False
+    )
+    max_uses: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    uses_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    is_revoked: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), default=None, nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+
+    project: Mapped["Project"] = relationship(back_populates="invite_codes")
+    creator: Mapped["User"] = relationship()
 
 
 class Environment(Base):
@@ -176,3 +211,20 @@ class AuditEvent(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
+
+
+class EnvironmentSnapshot(Base):
+    __tablename__ = "environment_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    environment_id: Mapped[int] = mapped_column(
+        ForeignKey("environments.id"), nullable=False, index=True
+    )
+    created_by: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    snapshot_data: Mapped[list[dict]] = mapped_column(JSON, nullable=False)

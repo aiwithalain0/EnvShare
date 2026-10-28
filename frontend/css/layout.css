@@ -99,7 +99,7 @@
   background-color: var(--color-surface-container-low);
 }
 
-/* Organization Switcher Strip in Sidebar */
+/* Workspace Context Label in Sidebar */
 .org-switcher-card {
   margin: var(--space-md) var(--space-md) var(--space-xs);
   padding: var(--space-sm) var(--space-md);
@@ -109,12 +109,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.org-switcher-card:hover {
-  background-color: var(--color-surface-container);
+  cursor: default;
 }
 
 .org-info {
@@ -205,13 +200,50 @@
 }
 
 .nav-link.is-active {
-  background-color: var(--color-surface-container);
+  background-color: var(--color-surface-container-low);
   color: var(--color-text-primary);
   font-weight: var(--font-weight-semibold);
 }
 
 .nav-link.is-active .material-symbols-outlined {
-  color: var(--color-primary);
+  color: var(--color-text-primary);
+}
+
+/* Sidebar Bottom User Profile Area */
+.sidebar-user-area {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.sidebar-user-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-user-name {
+  font-size: 13px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-user-email {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Sidebar Bottom Status Strip */
@@ -663,5 +695,53 @@
 
   .scope-pill {
     max-width: 160px;
+  }
+}
+
+/* ══════════════════════════════════════════════════════
+   Reusable Responsive Layout Classes
+   ══════════════════════════════════════════════════════ */
+.overview-layout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
+  width: 100%;
+}
+
+.overview-main-col {
+  min-width: 0;
+  width: 100%;
+}
+
+.overview-side-col {
+  min-width: 0;
+  width: 100%;
+}
+
+.two-col-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-lg);
+  align-items: start;
+  width: 100%;
+}
+
+.two-col-grid > * {
+  min-width: 0;
+  width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .overview-layout-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+  }
+
+  .two-col-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
   }
 }

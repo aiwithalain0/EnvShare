@@ -1,4 +1,5 @@
-﻿from datetime import datetime, timezone
+﻿
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
@@ -53,6 +54,7 @@ class EnvImportPreviewRequest(BaseModel):
 class EnvImportRequest(BaseModel):
     content: str = Field(min_length=1, max_length=100000)
     confirm_import: bool = False
+    overwrite_existing: bool = False
 
 
 def get_authorized_environment(
@@ -112,6 +114,17 @@ def get_variable(
     return variable
 
 
+def decrypt_stored_value(variable: Variable) -> str:
+    """Decrypt a stored value without exposing ciphertext or plaintext in logs."""
+    try:
+        return decrypt_value(variable.value_ciphertext)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="A stored variable could not be decrypted.",
+        )
+
+
 @router.post(
     "",
     response_model=VariableResponse,
@@ -124,8 +137,9 @@ def create_variable(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Ensure write permission for creating variables
-    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_WRITE
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -137,29 +151,29 @@ def create_variable(
         )
     )
 
-    if existing:
-        if not existing.is_deleted:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="A variable with this key already exists.",
-            )
-
-        variable = existing
-        variable.is_deleted = False
-        variable.deleted_at = None
-        variable.value_ciphertext = encrypt_value(variable_data.value)
-        variable.is_sensitive = variable_data.is_sensitive
-    else:
-        variable = Variable(
-            environment_id=environment.id,
-            key=variable_data.key,
-            value_ciphertext=encrypt_value(variable_data.value),
-            is_sensitive=variable_data.is_sensitive,
-            created_by=current_user.id,
+    if existing and not existing.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A variable with this key already exists.",
         )
-        db.add(variable)
 
     try:
+        if existing:
+            variable = existing
+            variable.is_deleted = False
+            variable.deleted_at = None
+            variable.value_ciphertext = encrypt_value(variable_data.value)
+            variable.is_sensitive = variable_data.is_sensitive
+        else:
+            variable = Variable(
+                environment_id=environment.id,
+                key=variable_data.key,
+                value_ciphertext=encrypt_value(variable_data.value),
+                is_sensitive=variable_data.is_sensitive,
+                created_by=current_user.id,
+            )
+            db.add(variable)
+
         db.flush()
 
         db.add(
@@ -204,8 +218,9 @@ def list_variables(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Ensure read permission for listing variables
-    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_READ)
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_READ
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -231,16 +246,21 @@ def update_variable(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Ensure write permission for updating variables
-    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_WRITE
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
-
     variable = get_variable(environment.id, variable_id, db)
-    new_ciphertext = encrypt_value(update_data.value)
 
     try:
+        old_value = decrypt_stored_value(variable)
+        sensitivity_changed = variable.is_sensitive != update_data.is_sensitive
+
+        if old_value == update_data.value and not sensitivity_changed:
+            return variable
+
         db.add(
             VariableVersion(
                 variable_id=variable.id,
@@ -249,7 +269,7 @@ def update_variable(
             )
         )
 
-        variable.value_ciphertext = new_ciphertext
+        variable.value_ciphertext = encrypt_value(update_data.value)
         variable.is_sensitive = update_data.is_sensitive
 
         db.add(
@@ -269,6 +289,9 @@ def update_variable(
         db.commit()
         db.refresh(variable)
 
+    except HTTPException:
+        db.rollback()
+        raise
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
@@ -296,11 +319,10 @@ def reveal_variable(
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
-
     variable = get_variable(environment.id, variable_id, db)
 
     try:
-        plaintext = decrypt_value(variable.value_ciphertext)
+        plaintext = decrypt_stored_value(variable)
 
         db.add(
             AuditEvent(
@@ -314,12 +336,9 @@ def reveal_variable(
         )
         db.commit()
 
-    except ValueError:
+    except HTTPException:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not retrieve the variable value.",
-        )
+        raise
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
@@ -327,10 +346,7 @@ def reveal_variable(
             detail="Could not record the reveal event.",
         )
 
-    return VariableRevealResponse(
-        key=variable.key,
-        value=plaintext,
-    )
+    return VariableRevealResponse(key=variable.key, value=plaintext)
 
 
 @router.delete(
@@ -350,7 +366,6 @@ def delete_variable(
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
-
     variable = get_variable(environment.id, variable_id, db)
 
     try:
@@ -396,7 +411,6 @@ def get_variable_history(
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
-
     variable = get_variable(environment.id, variable_id, db)
 
     versions = db.scalars(
@@ -415,6 +429,73 @@ def get_variable_history(
     ]
 
 
+@router.get(
+    "/{variable_id}/history/{version_id}/reveal",
+    response_model=VariableRevealResponse,
+)
+def reveal_variable_history(
+    project_id: int,
+    environment_id: int,
+    variable_id: int,
+    version_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_READ
+    )
+    environment = get_authorized_environment(
+        project_id, environment_id, current_user.id, db
+    )
+    variable = get_variable(environment.id, variable_id, db)
+
+    version = db.scalar(
+        select(VariableVersion).where(
+            VariableVersion.id == version_id,
+            VariableVersion.variable_id == variable.id,
+        )
+    )
+
+    if version is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Variable history version not found.",
+        )
+
+    try:
+        plaintext = decrypt_value(version.value_ciphertext)
+
+        db.add(
+            AuditEvent(
+                user_id=current_user.id,
+                project_id=project_id,
+                action="variable.history_revealed",
+                resource_type="variable",
+                resource_id=variable.id,
+                event_metadata={
+                    "key": variable.key,
+                    "version_id": version.id,
+                },
+            )
+        )
+        db.commit()
+
+    except ValueError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not decrypt the historical value.",
+        )
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not record the historical reveal.",
+        )
+
+    return VariableRevealResponse(key=variable.key, value=plaintext)
+
+
 @router.post("/import/preview")
 def preview_env_import(
     project_id: int,
@@ -423,8 +504,9 @@ def preview_env_import(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Ensure write permission for previewing import
-    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_WRITE
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -438,14 +520,13 @@ def preview_env_import(
             "variables": [],
         }
 
-    active_keys = set(
-        db.scalars(
-            select(Variable.key).where(
-                Variable.environment_id == environment.id,
-                Variable.is_deleted.is_(False),
-            )
-        ).all()
-    )
+    active_variables = db.scalars(
+        select(Variable).where(
+            Variable.environment_id == environment.id,
+            Variable.is_deleted.is_(False),
+        )
+    ).all()
+    active_by_key = {variable.key: variable for variable in active_variables}
 
     deleted_keys = set(
         db.scalars(
@@ -457,14 +538,20 @@ def preview_env_import(
     )
 
     preview = []
+
     for item in parsed["variables"]:
         key = item["key"]
-        if key in active_keys:
-            status_val = "already_exists"
-        elif key in deleted_keys:
-            status_val = "can_restore"
+        existing = active_by_key.get(key)
+
+        if existing is None:
+            status_val = "can_restore" if key in deleted_keys else "new"
         else:
-            status_val = "new"
+            existing_value = decrypt_stored_value(existing)
+            status_val = (
+                "unchanged"
+                if item["value"] == existing_value
+                else "update"
+            )
 
         preview.append(
             {
@@ -472,6 +559,9 @@ def preview_env_import(
                 "status": status_val,
                 "can_restore": key in deleted_keys,
                 "is_sensitive": True,
+                "existing_is_sensitive": (
+                    existing.is_sensitive if existing is not None else None
+                ),
             }
         )
 
@@ -480,11 +570,13 @@ def preview_env_import(
         "errors": [],
         "variables": preview,
         "total": len(preview),
-        "new_count": sum(
-            item["status"] == "new" for item in preview
+        "new_count": sum(item["status"] == "new" for item in preview),
+        "update_count": sum(item["status"] == "update" for item in preview),
+        "unchanged_count": sum(
+            item["status"] == "unchanged" for item in preview
         ),
         "existing_count": sum(
-            item["status"] == "already_exists" for item in preview
+            item["status"] in ("update", "unchanged") for item in preview
         ),
         "restore_count": sum(
             item["status"] == "can_restore" for item in preview
@@ -500,8 +592,9 @@ def import_env_file(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    # Ensure write permission for importing variables
-    require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_WRITE)
+    require_project_role(
+        project_id, current_user.id, db, allowed_roles=ROLES_WRITE
+    )
     environment = get_authorized_environment(
         project_id, environment_id, current_user.id, db
     )
@@ -531,59 +624,95 @@ def import_env_file(
 
     incoming_keys = [item["key"] for item in parsed["variables"]]
 
-    # Reject duplicate keys in the incoming batch defensively.
     if len(incoming_keys) != len(set(incoming_keys)):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="The import contains duplicate variable keys.",
         )
 
-    active_conflicting_keys = set(
-        db.scalars(
-            select(Variable.key).where(
-                Variable.environment_id == environment.id,
-                Variable.key.in_(incoming_keys),
-                Variable.is_deleted.is_(False),
-            )
-        ).all()
-    )
+    active_variables = db.scalars(
+        select(Variable).where(
+            Variable.environment_id == environment.id,
+            Variable.key.in_(incoming_keys),
+            Variable.is_deleted.is_(False),
+        )
+    ).all()
+    active_by_key = {variable.key: variable for variable in active_variables}
 
-    if active_conflicting_keys:
+    deleted_variables = db.scalars(
+        select(Variable).where(
+            Variable.environment_id == environment.id,
+            Variable.key.in_(incoming_keys),
+            Variable.is_deleted.is_(True),
+        )
+    ).all()
+    deleted_by_key = {variable.key: variable for variable in deleted_variables}
+
+    updates = []
+    unchanged_keys = []
+    for item in parsed["variables"]:
+        existing = active_by_key.get(item["key"])
+        if existing is None:
+            continue
+
+        old_value = decrypt_stored_value(existing)
+        if old_value == item["value"]:
+            unchanged_keys.append(item["key"])
+        else:
+            updates.append(item["key"])
+
+    if updates and not import_data.overwrite_existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail={
                 "message": (
-                    "Some variables already exist. Nothing was imported; "
-                    "remove or rename the conflicting keys and retry."
+                    "Some variables have different existing values. "
+                    "Enable overwrite to replace them."
                 ),
-                "conflicting_keys": sorted(active_conflicting_keys),
+                "conflicting_keys": updates,
             },
         )
 
-    deleted_variables_by_key = {
-        var.key: var
-        for var in db.scalars(
-            select(Variable).where(
-                Variable.environment_id == environment.id,
-                Variable.key.in_(incoming_keys),
-                Variable.is_deleted.is_(True),
-            )
-        ).all()
-    }
-
-    created_variables = []
+    imported_keys = []
+    updated_keys = []
+    created_keys = []
+    restored_keys = []
 
     try:
         for item in parsed["variables"]:
             key = item["key"]
-            ciphertext = encrypt_value(item["value"])
+            value = item["value"]
 
-            if key in deleted_variables_by_key:
-                variable = deleted_variables_by_key[key]
+            existing = active_by_key.get(key)
+
+            if existing is not None and key in unchanged_keys:
+                continue
+
+            ciphertext = encrypt_value(value)
+
+            if existing is not None:
+                db.add(
+                    VariableVersion(
+                        variable_id=existing.id,
+                        value_ciphertext=existing.value_ciphertext,
+                        changed_by=current_user.id,
+                    )
+                )
+                existing.value_ciphertext = ciphertext
+                existing.is_sensitive = True
+                variable = existing
+                updated_keys.append(key)
+                action = "variable.overwritten"
+
+            elif key in deleted_by_key:
+                variable = deleted_by_key[key]
                 variable.is_deleted = False
                 variable.deleted_at = None
                 variable.value_ciphertext = ciphertext
                 variable.is_sensitive = True
+                restored_keys.append(key)
+                action = "variable.restored"
+
             else:
                 variable = Variable(
                     environment_id=environment.id,
@@ -594,6 +723,8 @@ def import_env_file(
                 )
                 db.add(variable)
                 db.flush()
+                created_keys.append(key)
+                action = "variable.created"
 
             db.add(
                 VariableVersion(
@@ -607,35 +738,39 @@ def import_env_file(
                 AuditEvent(
                     user_id=current_user.id,
                     project_id=project_id,
-                    action="variable.created",
+                    action=action,
                     resource_type="variable",
                     resource_id=variable.id,
                     event_metadata={
-                        "key": variable.key,
+                        "key": key,
                         "is_sensitive": True,
                         "source": "env_import",
                     },
                 )
             )
+            imported_keys.append(key)
 
-            created_variables.append(variable.key)
-
-        db.add(
-            AuditEvent(
-                user_id=current_user.id,
-                project_id=project_id,
-                action="variables.imported",
-                resource_type="environment",
-                resource_id=environment.id,
-                event_metadata={
-                    "count": len(created_variables),
-                    "keys": created_variables,
-                },
+        if imported_keys:
+            db.add(
+                AuditEvent(
+                    user_id=current_user.id,
+                    project_id=project_id,
+                    action="variables.imported",
+                    resource_type="environment",
+                    resource_id=environment.id,
+                    event_metadata={
+                        "count": len(imported_keys),
+                        "keys": imported_keys,
+                        "overwrite_existing": import_data.overwrite_existing,
+                    },
+                )
             )
-        )
 
         db.commit()
 
+    except HTTPException:
+        db.rollback()
+        raise
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
@@ -645,13 +780,13 @@ def import_env_file(
 
     return {
         "message": "Variables imported successfully.",
-        "imported_count": len(created_variables),
+        "imported_count": len(imported_keys),
+        "unchanged_count": len(unchanged_keys),
+        "created_count": len(created_keys),
+        "updated_count": len(updated_keys),
+        "restored_count": len(restored_keys),
         "variables": [
-            {
-                "key": key,
-                "is_sensitive": True,
-            }
-            for key in created_variables
+            {"key": key, "is_sensitive": True}
+            for key in imported_keys
         ],
-    }
-
+   }

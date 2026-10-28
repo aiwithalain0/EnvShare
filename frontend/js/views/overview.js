@@ -1,6 +1,6 @@
 /**
  * EnvShare Overview / Admin Dashboard View
- * Extracted from Google Stitch Project 7000277523774803089
+ * Extracted and aligned with Google Stitch design (envshare_clean_minimalist_overview_dashboard)
  */
 
 import { store } from '../store.js';
@@ -12,196 +12,131 @@ export async function renderOverviewView(container) {
   const user = state.auth.user;
 
   container.innerHTML = `
-    <!-- Top Context & Header Strip -->
-    <div style="display: flex; flex-direction: column; gap: var(--space-xs);">
-      <div style="display: flex; align-items: center; gap: var(--space-xs); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary);">
-        <span>Workspace</span>
-        <span style="color: var(--color-text-muted);">/</span>
-        <span style="color: var(--color-text-primary);">Acme Corp</span>
-      </div>
-      <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-md);">
-        <div>
-          <h1 class="font-headline-lg">Overview</h1>
-          <p class="font-body-sm" style="color: var(--color-text-secondary); margin-top: 2px;">
-            Administrative summary and cryptographic runtime activity for Acme Corp.
-          </p>
-        </div>
-        <div style="display: flex; align-items: center; gap: var(--space-sm);">
-          <button id="overview-new-project-btn" class="btn btn-primary" type="button">
-            <span class="material-symbols-outlined">add</span>
-            <span>New Project</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4 Summary Metric Cards -->
-    <div class="metrics-grid">
-      <!-- Metric 1: Active Projects -->
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">Active Projects</span>
-          <div class="metric-icon-box">
-            <span class="material-symbols-outlined">folder_data</span>
-          </div>
-        </div>
-        <div class="metric-stat-row">
+    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <!-- Header Row: Overview Title + Primary Create Project Button -->
+      <div style="display: flex; flex-direction: column; gap: 1rem; border-bottom: 1px solid var(--color-border); padding-bottom: 1.25rem;">
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;">
           <div>
-            <span class="metric-number" id="metric-project-count">-</span>
-            <span class="metric-unit">repos</span>
+            <h1 class="font-headline-lg" style="margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--color-text-primary);">Overview</h1>
+            <p class="font-body-sm" style="margin-top: 4px; color: var(--color-text-secondary);">Manage your workspace environments, secrets, and project access.</p>
           </div>
-          <span class="badge badge-prod badge-code">All Synced</span>
-        </div>
-        <div class="metric-subtext" id="metric-project-names">Loading projects...</div>
-      </div>
-
-      <!-- Metric 2: Environments -->
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">Environments</span>
-          <div class="metric-icon-box">
-            <span class="material-symbols-outlined">layers</span>
-          </div>
-        </div>
-        <div class="metric-stat-row">
-          <div>
-            <span class="metric-number" id="metric-env-count">-</span>
-            <span class="metric-unit">deployed</span>
-          </div>
-          <div style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 500; color: var(--color-prod-text);">
-            <span class="pulse-dot"></span> Active
-          </div>
-        </div>
-        <div class="metric-subtext">Dev, Staging, Production tiers</div>
-      </div>
-
-      <!-- Metric 3: Team Access -->
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">Team Access</span>
-          <div class="metric-icon-box">
-            <span class="material-symbols-outlined">group</span>
-          </div>
-        </div>
-        <div class="metric-stat-row">
-          <div>
-            <span class="metric-number">8</span>
-            <span class="metric-unit">seats</span>
-          </div>
-          <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary);">2 Admins</span>
-        </div>
-        <div class="metric-subtext">3 Managers • 3 Developers</div>
-      </div>
-
-      <!-- Metric 4: 24h Mutations -->
-      <div class="metric-card">
-        <div class="metric-card-top">
-          <span class="metric-label">24h Mutations</span>
-          <div class="metric-icon-box">
-            <span class="material-symbols-outlined">verified_user</span>
-          </div>
-        </div>
-        <div class="metric-stat-row">
-          <div>
-            <span class="metric-number" id="metric-mutations-count">-</span>
-            <span class="metric-unit">actions</span>
-          </div>
-          <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary);">
-            <span class="material-symbols-outlined" style="font-size: 13px; color: var(--color-prod);">check_circle</span> SOC2
-          </span>
-        </div>
-        <div class="metric-subtext">100% Cryptographically signed</div>
-      </div>
-    </div>
-
-    <!-- Zero-Trust Environment Orchestration Banner -->
-    <div class="security-banner">
-      <div class="security-banner-left">
-        <span class="material-symbols-outlined security-banner-icon">lock</span>
-        <div>
-          <span class="security-banner-title">Zero-Trust Environment Orchestration Active.</span>
-          <span class="security-banner-desc">Client side AES-GCM 256-bit encryption is verified for all runtime secrets.</span>
-        </div>
-      </div>
-      <div class="security-banner-key">
-        <span class="pulse-dot"></span>
-        <span>KMS HSM Key:</span>
-        <strong>kms-us-east-1-prod</strong>
-      </div>
-    </div>
-
-    <!-- Main Content Split: 8 Col (Registered Projects) + 4 Col (Recent Activity Timeline) -->
-    <div style="display: grid; grid-template-columns: repeat(12, 1fr); gap: var(--space-lg); align-items: start;">
-      
-      <!-- Left Column: Projects Overview (8 cols) -->
-      <div class="table-surface-card" style="grid-column: span 8;">
-        <div class="table-toolbar">
-          <div style="display: flex; align-items: center; gap: var(--space-sm);">
-            <h2 class="font-headline-sm">Registered Projects</h2>
-            <span id="overview-project-count-pill" class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary);">
-              0 Total
-            </span>
-          </div>
-          <div style="display: flex; align-items: center; gap: var(--space-sm);">
-            <div style="position: relative;">
-              <input id="overview-project-search" type="text" class="input-control" placeholder="Filter projects..." style="height: 32px; width: 180px; padding-left: 28px;">
-              <span class="material-symbols-outlined" style="position: absolute; left: 8px; top: 8px; font-size: 16px; color: var(--color-text-muted);">search</span>
-            </div>
-            <button id="overview-refresh-btn" class="btn btn-secondary btn-icon" title="Refresh project list" type="button" style="height: 32px; width: 32px;">
-              <span class="material-symbols-outlined">refresh</span>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <button id="overview-join-project-btn" class="btn btn-secondary" type="button" style="height: 36px; padding: 0 14px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">login</span>
+              <span>Join Project</span>
+            </button>
+            <button id="overview-new-project-btn" class="btn btn-primary" type="button" style="height: 36px; padding: 0 14px; background-color: #09090b; color: #fff; border-radius: var(--radius-md); font-size: 13px; font-weight: 500;">
+              <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
+              <span>Create Project</span>
             </button>
           </div>
         </div>
+      </div>
 
-        <!-- Desktop Table View -->
-        <div class="table-wrapper data-table-desktop">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Project Name</th>
-                <th>Runtime / Tags</th>
-                <th>Environments</th>
-                <th style="text-align: right;">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="overview-projects-tbody">
-              <tr>
-                <td colspan="4" style="text-align: center; padding: var(--space-xl);">
-                  <div class="spinner"></div>
-                  <div style="margin-top: var(--space-xs); color: var(--color-text-secondary);">Loading projects...</div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      <!-- Summary Metrics Row (3-Card Layout from Stitch) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
+        <!-- Card 1: Projects -->
+        <div class="metric-card" style="padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--color-border); background-color: var(--color-surface-container-lowest); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="font-size: 12px; font-weight: 500; color: var(--color-text-secondary);">Projects</div>
+          <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
+            <span id="metric-project-count" style="font-size: 28px; font-weight: 600; color: var(--color-text-primary); letter-spacing: -0.02em; line-height: 1;">-</span>
+            <span class="font-body-sm" style="color: var(--color-text-muted); font-size: 12px;" id="metric-project-names">Active projects</span>
+          </div>
         </div>
 
-        <!-- Mobile Stacked Card View (< 768px) -->
-        <div class="mobile-card-list" id="overview-projects-mobile-list">
-          <!-- Populated via JS -->
+        <!-- Card 2: Environments -->
+        <div class="metric-card" style="padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--color-border); background-color: var(--color-surface-container-lowest); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="font-size: 12px; font-weight: 500; color: var(--color-text-secondary);">Environments</div>
+          <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
+            <span id="metric-env-count" style="font-size: 28px; font-weight: 600; color: var(--color-text-primary); letter-spacing: -0.02em; line-height: 1;">-</span>
+            <span class="font-body-sm" style="color: var(--color-text-muted); font-size: 12px;" id="metric-env-names">Environments across all projects</span>
+          </div>
         </div>
 
-        <div style="padding: var(--space-sm) var(--space-lg); background-color: rgba(242, 243, 255, 0.4); border-top: 1px solid var(--color-border-subtle); display: flex; align-items: center; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary);">
-          <span>Synced with Organization Workspace: acme-corp/*</span>
-          <span style="color: var(--color-text-primary); font-weight: 500;">Zero-Leak Memory Storage Active</span>
+        <!-- Card 3: Audit Activity -->
+        <div class="metric-card" style="padding: 1.25rem; border-radius: var(--radius-lg); border: 1px solid var(--color-border); background-color: var(--color-surface-container-lowest); display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="font-size: 12px; font-weight: 500; color: var(--color-text-secondary);">Audit Mutations</div>
+          <div style="margin-top: 0.5rem; display: flex; flex-direction: column; gap: 4px;">
+            <span id="metric-mutations-count" style="font-size: 28px; font-weight: 600; color: var(--color-text-primary); letter-spacing: -0.02em; line-height: 1;">-</span>
+            <span class="font-body-sm" style="color: var(--color-text-muted); font-size: 12px;">Logged mutation events</span>
+          </div>
         </div>
       </div>
 
-      <!-- Right Column: Recent Activity Timeline (4 cols) -->
-      <div class="table-surface-card" style="grid-column: span 4;">
-        <div class="table-toolbar">
-          <div style="display: flex; align-items: center; gap: var(--space-xs);">
-            <span class="material-symbols-outlined" style="color: var(--color-text-secondary); font-size: 18px;">history</span>
-            <h2 class="font-headline-sm">Recent Activity</h2>
+      <!-- Main Section: Recent Projects + Recent Activity Timeline -->
+      <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+
+        <!-- Recent Projects Table -->
+        <div class="table-surface-card" style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); background-color: var(--color-surface-container-lowest); overflow: hidden;">
+          <div style="padding: 0.875rem 1.25rem; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; background-color: var(--color-surface-container-lowest);">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-weight: 500; font-size: 14px; color: var(--color-text-primary);">Recent Projects</span>
+              <span id="overview-project-count-pill" class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary);">0 Total</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="position: relative;">
+                <input id="overview-project-search" type="text" class="input-control" placeholder="Filter projects..." style="height: 30px; width: 160px; padding-left: 26px; font-size: 12px; border-radius: var(--radius-md);">
+                <span class="material-symbols-outlined" style="position: absolute; left: 6px; top: 7px; font-size: 15px; color: var(--color-text-muted);">search</span>
+              </div>
+              <a href="#projects" class="brand-link" style="display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); text-decoration: none;">
+                <span>View all</span>
+                <span class="material-symbols-outlined" style="font-size: 14px;">arrow_forward</span>
+              </a>
+              <button id="overview-refresh-btn" class="btn btn-secondary btn-icon" title="Refresh project list" type="button" style="height: 30px; width: 30px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">refresh</span>
+              </button>
+            </div>
           </div>
-          <span class="pulse-dot" title="Live stream active"></span>
+
+          <!-- Desktop Table View -->
+          <div class="table-wrapper data-table-desktop">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--color-border); background-color: var(--color-canvas); font-size: 11px; text-transform: uppercase; font-weight: 600; color: var(--color-text-secondary); letter-spacing: 0.05em;">
+                  <th style="padding: 10px 16px; text-align: left;">Project</th>
+                  <th style="padding: 10px 16px; text-align: left;">Environments</th>
+                  <th style="padding: 10px 16px; text-align: left;">Created</th>
+                  <th style="padding: 10px 16px; text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="overview-projects-tbody">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 2rem;">
+                    <div class="spinner"></div>
+                    <div style="margin-top: 0.5rem; color: var(--color-text-secondary); font-size: 13px;">Loading projects...</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile Stacked Card View (< 768px) -->
+          <div class="mobile-card-list" id="overview-projects-mobile-list" style="padding: 0.5rem;">
+            <!-- Populated via JS -->
+          </div>
         </div>
 
-        <div id="overview-activity-stream" style="padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-md);">
-          <div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">
-            <div class="spinner"></div>
-            <div style="margin-top: var(--space-xs);">Loading audit events...</div>
+        <!-- Recent Activity Feed (Stitch Stream) -->
+        <div class="table-surface-card" style="border: 1px solid var(--color-border); border-radius: var(--radius-lg); background-color: var(--color-surface-container-lowest); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); padding-bottom: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-weight: 500; font-size: 14px; color: var(--color-text-primary);">Recent Activity</span>
+              <span style="font-size: 12px; color: var(--color-text-muted);">Audit feed</span>
+            </div>
+            <a href="#audit-logs" class="brand-link" style="display: inline-flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 500; color: var(--color-text-secondary); text-decoration: none;">
+              <span>View full audit log</span>
+              <span class="material-symbols-outlined" style="font-size: 14px;">arrow_forward</span>
+            </a>
+          </div>
+
+          <div id="overview-activity-stream" style="display: flex; flex-direction: column; divide-y: divide-neutral-100;">
+            <div style="text-align: center; padding: 1.5rem; color: var(--color-text-secondary); font-size: 13px;">
+              <div class="spinner"></div>
+              <div style="margin-top: 0.5rem;">Loading audit events...</div>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   `;
@@ -211,56 +146,83 @@ export async function renderOverviewView(container) {
     window.openNewProjectModal?.();
   });
 
+  // Hook Join Project Button
+  document.getElementById('overview-join-project-btn')?.addEventListener('click', () => {
+    window.openJoinProjectModal?.();
+  });
+
+  let loadedProjects = [];
+
   // Load Real Data from Backend
   async function loadOverviewData() {
     try {
       const projects = await listProjects();
+      loadedProjects = projects;
       store.setProjects(projects);
 
-      document.getElementById('metric-project-count').textContent = projects.length;
-      document.getElementById('overview-project-count-pill').textContent = `${projects.length} Total`;
-      
+      const pCountEl = document.getElementById('metric-project-count');
+      const pillEl = document.getElementById('overview-project-count-pill');
+      if (pCountEl) pCountEl.textContent = projects.length;
+      if (pillEl) pillEl.textContent = `${projects.length} Total`;
+
       if (projects.length > 0) {
-        document.getElementById('metric-project-names').textContent = projects.slice(0, 4).map(p => p.name).join(', ');
+        const namesEl = document.getElementById('metric-project-names');
+        if (namesEl) namesEl.textContent = `${projects.length} active in workspace`;
       } else {
-        document.getElementById('metric-project-names').textContent = 'No repositories yet';
+        const namesEl = document.getElementById('metric-project-names');
+        if (namesEl) namesEl.textContent = 'No projects yet';
       }
 
-      // Fetch environments for first active project
-      let totalEnvs = 0;
+      // Fetch environments across all projects accurately
       if (projects.length > 0) {
         try {
-          const envs = await listEnvironments(projects[0].id);
-          totalEnvs = envs.length;
-          document.getElementById('metric-env-count').textContent = totalEnvs;
+          const envsPerProject = await Promise.all(
+            projects.map(p => listEnvironments(p.id).catch(() => []))
+          );
+          const totalEnvs = envsPerProject.reduce((sum, list) => sum + list.length, 0);
+          const envCountEl = document.getElementById('metric-env-count');
+          const envNamesEl = document.getElementById('metric-env-names');
+          if (envCountEl) envCountEl.textContent = totalEnvs;
+          if (envNamesEl) envNamesEl.textContent = `${totalEnvs} active across projects`;
         } catch {
-          document.getElementById('metric-env-count').textContent = '3';
+          const envCountEl = document.getElementById('metric-env-count');
+          if (envCountEl) envCountEl.textContent = '-';
         }
 
         // Fetch Audit Logs for activity timeline
         try {
           const logs = await getProjectAuditLogs(projects[0].id, 10);
-          document.getElementById('metric-mutations-count').textContent = logs.length;
+          const mutEl = document.getElementById('metric-mutations-count');
+          if (mutEl) mutEl.textContent = logs.length;
           renderActivityStream(logs);
         } catch {
+          const mutEl = document.getElementById('metric-mutations-count');
+          if (mutEl) mutEl.textContent = '0';
           renderActivityStream([]);
         }
       } else {
-        document.getElementById('metric-env-count').textContent = '0';
-        document.getElementById('metric-mutations-count').textContent = '0';
+        const envCountEl = document.getElementById('metric-env-count');
+        const envNamesEl = document.getElementById('metric-env-names');
+        const mutEl = document.getElementById('metric-mutations-count');
+        if (envCountEl) envCountEl.textContent = '0';
+        if (envNamesEl) envNamesEl.textContent = 'No projects registered';
+        if (mutEl) mutEl.textContent = '0';
         renderActivityStream([]);
       }
 
       renderProjectsTable(projects);
 
     } catch (err) {
-      document.getElementById('overview-projects-tbody').innerHTML = `
-        <tr>
-          <td colspan="4" style="text-align: center; padding: var(--space-xl); color: var(--color-error);">
-            Failed to load projects: ${err.message}
-          </td>
-        </tr>
-      `;
+      const tbody = document.getElementById('overview-projects-tbody');
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="4" style="text-align: center; padding: 2rem; color: var(--color-error);">
+              Failed to load projects: ${err.message}
+            </td>
+          </tr>
+        `;
+      }
     }
   }
 
@@ -273,79 +235,73 @@ export async function renderOverviewView(container) {
     if (!projects || projects.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="4" style="text-align: center; padding: var(--space-2xl);">
+          <td colspan="4" style="text-align: center; padding: 2.5rem 1rem;">
             <div class="empty-state-card" style="border: none; padding: 0;">
               <div class="empty-state-icon">
                 <span class="material-symbols-outlined">folder_open</span>
               </div>
-              <h3 class="font-headline-sm">No Projects Found</h3>
-              <p class="font-body-sm" style="color: var(--color-text-secondary); max-width: 320px;">
+              <h3 class="font-headline-sm" style="margin: 0.5rem 0 0.25rem 0;">No Projects Found</h3>
+              <p class="font-body-sm" style="color: var(--color-text-secondary); max-width: 320px; margin: 0 auto 1rem auto;">
                 Create your first project to start managing environments and runtime secrets.
               </p>
-              <button class="btn btn-primary" onclick="window.openNewProjectModal()" style="margin-top: var(--space-sm);">
-                <span class="material-symbols-outlined">add</span>
+              <button class="btn btn-primary" onclick="window.openNewProjectModal()" style="height: 36px; padding: 0 14px; background-color: #09090b; color: #fff; border-radius: var(--radius-md);">
+                <span class="material-symbols-outlined" style="font-size: 16px;">add</span>
                 <span>Create Project</span>
               </button>
             </div>
           </td>
         </tr>
       `;
-      mobileList.innerHTML = `<div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary);">No projects registered.</div>`;
+      mobileList.innerHTML = `<div style="text-align: center; padding: 1.5rem; color: var(--color-text-secondary); font-size: 13px;">No projects registered.</div>`;
       return;
     }
 
-    tbody.innerHTML = projects.map(p => `
-      <tr>
-        <td>
-          <div style="display: flex; align-items: center; gap: var(--space-sm);">
-            <div style="width: 28px; height: 28px; border-radius: var(--radius-sm); background-color: var(--color-surface-container); color: var(--color-secondary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              <span class="material-symbols-outlined" style="font-size: 16px;">credit_card</span>
-            </div>
-            <div>
-              <div style="display: flex; align-items: center; gap: 6px;">
-                <span class="font-label-code-md" style="font-weight: 600; color: var(--color-text-primary);">${escapeHtml(p.name)}</span>
-                <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary); font-size: 10px;">Primary</span>
+    tbody.innerHTML = projects.slice(0, 5).map(p => {
+      const initials = (p.name.slice(0, 2) || 'PR').toUpperCase();
+      return `
+        <tr style="border-bottom: 1px solid var(--color-border); transition: background-color var(--transition-fast);">
+          <td style="padding: 12px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 28px; height: 28px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background-color: var(--color-canvas); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--color-text-primary);">
+                ${initials}
               </div>
-              <p class="font-body-sm" style="color: var(--color-text-secondary); margin-top: 1px;">
-                Created ${new Date(p.created_at).toLocaleDateString()}
-              </p>
+              <div>
+                <a href="#variables" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables'); return false;" style="font-weight: 500; font-size: 14px; color: var(--color-text-primary); text-decoration: none;">
+                  ${escapeHtml(p.name)}
+                </a>
+                <div style="font-size: 11px; color: var(--color-text-muted); font-family: var(--font-mono);">id: ${p.id}</div>
+              </div>
             </div>
-          </div>
-        </td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <span class="badge badge-code" style="background-color: var(--color-surface-container); color: var(--color-text-secondary);">Production Service</span>
-          </div>
-        </td>
-        <td>
-          <div style="display: flex; align-items: center; gap: 4px;">
-            <span class="badge badge-dev badge-code">Dev</span>
-            <span class="badge badge-stg badge-code">Stg</span>
-            <span class="badge badge-prod badge-code">Prod</span>
-          </div>
-        </td>
-        <td style="text-align: right;">
-          <button class="btn btn-secondary btn-sm" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables')">
-            <span>Manage</span>
-            <span class="material-symbols-outlined" style="font-size: 14px;">arrow_forward</span>
-          </button>
-        </td>
-      </tr>
-    `).join('');
+          </td>
+          <td style="padding: 12px 16px;">
+            <div style="display: flex; align-items: center; gap: 6px; font-family: var(--font-mono); font-size: 11px;">
+              <span class="badge badge-prod">Prod</span>
+              <span class="badge badge-stg">Staging</span>
+              <span class="badge badge-dev">Dev</span>
+            </div>
+          </td>
+          <td style="padding: 12px 16px; font-size: 12px; color: var(--color-text-secondary);">
+            ${p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Active'}
+          </td>
+          <td style="padding: 12px 16px; text-align: right;">
+            <a href="#variables" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables'); return false;" class="btn btn-secondary btn-sm" style="font-size: 12px; height: 28px; padding: 0 10px; border-radius: var(--radius-sm);">
+              View Variables
+            </a>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
-    mobileList.innerHTML = projects.map(p => `
-      <div class="mobile-data-card">
-        <div class="mobile-data-card-header">
-          <div>
-            <span class="font-label-code-md" style="font-weight: 600; color: var(--color-text-primary);">${escapeHtml(p.name)}</span>
-            <p class="font-body-sm" style="color: var(--color-text-secondary);">Created ${new Date(p.created_at).toLocaleDateString()}</p>
-          </div>
-          <span class="badge badge-prod badge-code">Prod</span>
+    mobileList.innerHTML = projects.slice(0, 5).map(p => `
+      <div class="mobile-data-card" style="padding: 12px; border-bottom: 1px solid var(--color-border);">
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <span style="font-weight: 600; font-size: 14px; color: var(--color-text-primary);">${escapeHtml(p.name)}</span>
+          <span class="badge badge-prod">Active</span>
         </div>
-        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: var(--space-xs); font-family: var(--font-mono); font-size: 11px; color: var(--color-text-secondary);">
-          <span>3 Environments</span>
-          <button class="btn btn-ghost btn-sm" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables')">
-            Manage →
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+          <span style="font-size: 12px; color: var(--color-text-muted);">Dev • Staging • Prod</span>
+          <button class="btn btn-secondary btn-sm" onclick="window.selectProjectAndNavigate(${p.id}, '${escapeHtml(p.name)}', 'variables')" style="font-size: 11px;">
+            Open →
           </button>
         </div>
       </div>
@@ -358,42 +314,60 @@ export async function renderOverviewView(container) {
 
     if (!logs || logs.length === 0) {
       stream.innerHTML = `
-        <div style="text-align: center; padding: var(--space-lg); color: var(--color-text-secondary); font-size: var(--font-size-body-sm);">
-          No recent activity recorded for this workspace.
+        <div style="text-align: center; padding: 1.5rem; color: var(--color-text-muted); font-size: 13px;">
+          No recent audit events in this project.
         </div>
       `;
       return;
     }
 
-    stream.innerHTML = logs.slice(0, 5).map(event => {
-      let icon = 'edit_note';
-      if (event.action.includes('created')) icon = 'add_circle';
-      if (event.action.includes('deleted')) icon = 'delete';
-      if (event.action.includes('revealed')) icon = 'visibility';
-      if (event.action.includes('imported')) icon = 'file_upload';
+    stream.innerHTML = logs.slice(0, 5).map(log => {
+      let icon = 'edit';
+      if (log.action.toLowerCase().includes('create')) icon = 'add_circle';
+      if (log.action.toLowerCase().includes('delete')) icon = 'delete';
+      if (log.action.toLowerCase().includes('reveal')) icon = 'visibility';
+      if (log.action.toLowerCase().includes('import')) icon = 'sync';
 
-      const timeAgo = formatTimeAgo(new Date(event.created_at));
+      const timeAgo = formatTimeAgo(log.created_at);
 
       return `
-        <div style="display: flex; align-items: flex-start; gap: var(--space-sm); padding-bottom: var(--space-sm); border-bottom: 1px solid var(--color-border-subtle);">
-          <div style="width: 24px; height: 24px; border-radius: 50%; background-color: var(--color-surface-container-high); color: var(--color-text-secondary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;">
-            <span class="material-symbols-outlined" style="font-size: 14px;">${icon}</span>
-          </div>
-          <div style="flex: 1; min-width: 0;">
-            <p class="font-body-sm" style="color: var(--color-text-primary); line-height: 1.3;">
-              <strong style="font-weight: 600;">${escapeHtml(event.action)}</strong>
-              ${event.resource_type ? `<span class="badge badge-code" style="font-size: 10px; margin-left: 4px;">${escapeHtml(event.resource_type)}</span>` : ''}
-            </p>
-            <div style="display: flex; align-items: center; gap: 6px; margin-top: 3px; font-family: var(--font-mono); font-size: 10px; color: var(--color-text-muted);">
-              <span>User #${event.user_id}</span>
-              <span>•</span>
-              <span>${timeAgo}</span>
+        <div style="padding: 10px 0; border-bottom: 1px solid var(--color-border); display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <span class="material-symbols-outlined" style="font-size: 18px; color: var(--color-text-muted); flex-shrink: 0;">${icon}</span>
+            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+              <code style="font-family: var(--font-mono); font-size: 12px; background-color: var(--color-canvas); color: var(--color-text-primary); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--color-border);">${escapeHtml(log.variable_key || log.action)}</code>
+              <span style="font-size: 12px; color: var(--color-text-secondary);">${escapeHtml(log.action)}</span>
             </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); flex-shrink: 0;">
+            <span style="font-family: var(--font-mono); color: var(--color-text-secondary);">user #${log.user_id}</span>
+            <span>•</span>
+            <span style="font-weight: 500; color: var(--color-text-primary);">${timeAgo}</span>
           </div>
         </div>
       `;
     }).join('');
   }
+
+  function formatTimeAgo(dateStr) {
+    if (!dateStr) return 'just now';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now - date) / 1000);
+    if (diffSec < 60) return `${diffSec}s ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    return `${Math.floor(diffHr / 24)}d ago`;
+  }
+
+  // Filter Search
+  document.getElementById('overview-project-search')?.addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase().trim();
+    const filtered = loadedProjects.filter(p => p.name.toLowerCase().includes(term));
+    renderProjectsTable(filtered);
+  });
 
   document.getElementById('overview-refresh-btn')?.addEventListener('click', loadOverviewData);
 
@@ -408,14 +382,4 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
-}
-
-function formatTimeAgo(date) {
-  const seconds = Math.floor((new Date() - date) / 1000);
-  if (seconds < 60) return `${seconds}s ago`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
 }
