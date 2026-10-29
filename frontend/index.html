@@ -1,16 +1,22 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EnvShare â€” Enterprise Environment Security & Secrets Management</title>
-  <meta name="description" content="Precision engineering environment variable and secret management for high-assurance development teams.">
+  <title>EnvShare — Enterprise Environment Security &amp; Secrets Management</title>
+  <meta name="description"
+    content="Precision engineering environment variable and secret management for high-assurance development teams.">
 
   <!-- Google Fonts: Geist, Geist Mono, Inter, JetBrains Mono, Material Symbols -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500;600&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap"
+    rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+    rel="stylesheet">
 
   <!-- Design System Tokens & Component Stylesheets -->
   <link rel="stylesheet" href="css/tokens.css">
@@ -18,6 +24,7 @@
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/components.css">
 </head>
+
 <body>
   <!-- Accessible Skip Link -->
   <a href="#main-content" class="skip-link">Skip to main content</a>
@@ -28,13 +35,13 @@
   <!-- Unauthenticated Views Container (Login & Register) -->
   <div id="auth-container" aria-live="polite"></div>
 
-  <!-- Authenticated Application Shell (Precision Engineering Canvas) -->
+  <!-- Authenticated Application Shell -->
   <div id="app-shell" class="app-shell" style="display: none;">
 
     <!-- Left Sidebar Navigation Rail -->
     <aside class="app-sidebar" id="app-sidebar" aria-label="Main Navigation">
       <div>
-      <!-- Top Brand Header -->
+        <!-- Top Brand Header -->
         <div class="sidebar-header">
           <a href="#overview" class="brand-wrapper" aria-label="EnvShare Home">
             <div class="brand-icon-box">
@@ -82,12 +89,14 @@
 
       <!-- Sidebar Bottom: User Profile -->
       <div class="sidebar-user-area" id="sidebar-user-area">
-        <div id="user-avatar-circle-sidebar" class="user-avatar-circle" style="width:32px;height:32px;font-size:11px;flex-shrink:0;">ES</div>
+        <div id="user-avatar-circle-sidebar" class="user-avatar-circle"
+          style="width:32px;height:32px;font-size:11px;flex-shrink:0;">ES</div>
         <div class="sidebar-user-info">
           <span class="sidebar-user-name" id="sidebar-user-name">User</span>
           <span class="sidebar-user-email" id="sidebar-user-email">Signed in</span>
         </div>
-        <button id="btn-sidebar-logout" type="button" class="btn-icon" title="Log out" aria-label="Log out" style="color:var(--color-text-muted);">
+        <button id="btn-sidebar-logout" type="button" class="btn-icon" title="Log out" aria-label="Log out"
+          style="color:var(--color-text-muted);">
           <span class="material-symbols-outlined" style="font-size:18px;">logout</span>
         </button>
       </div>
@@ -105,7 +114,8 @@
 
           <!-- Breadcrumb Scope Selector -->
           <div class="header-scope" id="header-scope-selector">
-            <a href="#projects" class="scope-pill" id="scope-pill-btn" title="View Projects" style="text-decoration: none; color: inherit;">
+            <a href="#projects" class="scope-pill" id="scope-pill-btn" title="View Projects"
+              style="text-decoration: none; color: inherit;">
               <span class="scope-org">EnvShare</span>
               <span class="scope-sep">/</span>
               <span class="scope-project" id="header-current-project-name">Select Project</span>
@@ -121,7 +131,8 @@
           <!-- Quick Search -->
           <div class="header-search">
             <span class="material-symbols-outlined" style="font-size: 16px;">search</span>
-            <input id="header-quick-search" type="text" placeholder="Search variables, keys... (âŒ˜K)" aria-label="Search variables and keys">
+            <input id="header-quick-search" type="text" placeholder="Search variables, keys... (⌘K)"
+              aria-label="Search variables and keys">
           </div>
 
           <!-- Primary Header Action -->
@@ -140,8 +151,10 @@
               </div>
               <span class="user-email" id="user-email-display">Signed in</span>
             </div>
-            <button id="btn-quick-logout" type="button" class="btn btn-ghost btn-sm btn-icon" title="Log out safely" style="margin-left: var(--space-xs);">
-              <span class="material-symbols-outlined" style="font-size: 16px; color: var(--color-text-secondary);">logout</span>
+            <button id="btn-quick-logout" type="button" class="btn btn-ghost btn-sm btn-icon" title="Log out safely"
+              style="margin-left: var(--space-xs);">
+              <span class="material-symbols-outlined"
+                style="font-size: 16px; color: var(--color-text-secondary);">logout</span>
             </button>
           </div>
         </div>
@@ -155,10 +168,12 @@
   </div>
 
   <!-- Global Accessible Modal Backdrop -->
-  <div id="global-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="global-modal-title" aria-hidden="true" style="display: none;">
+  <div id="global-modal-backdrop" class="modal-backdrop" role="dialog" aria-modal="true"
+    aria-labelledby="global-modal-title" aria-hidden="true" style="display: none;">
     <div class="modal-container" id="global-modal-container">
       <div class="modal-header">
-        <h3 id="global-modal-title" class="font-headline-sm" style="margin: 0; color: var(--color-text-primary);">Dialog Title</h3>
+        <h3 id="global-modal-title" class="font-headline-sm" style="margin: 0; color: var(--color-text-primary);">Dialog
+          Title</h3>
         <button id="global-modal-close-btn" class="modal-close-btn" type="button" aria-label="Close dialog">
           <span class="material-symbols-outlined" style="font-size: 18px;">close</span>
         </button>
@@ -176,13 +191,24 @@
   <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <!-- EnvShare Backend API -->
-  <script>window.ENVSHARE_API_URL = 'https://envshare-kguiulhkg-mr-alain.vercel.app';</script>
+  <script>
+    window.ENVSHARE_API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
+      ? 'http://127.0.0.1:8000'
+      : 'https://envshare-tau-six.vercel.app';
+  </script>
 
   <!-- Application Bootstrap Module -->
   <script type="module">
     import { store } from './js/store.js';
     import { router } from './js/router.js';
-    import { checkBackendHealth, listProjects, createProject, createEnvironment, listEnvironments, joinProjectWithCode } from './js/api.js';
+    import {
+      checkBackendHealth,
+      listProjects,
+      createProject,
+      createEnvironment,
+      listEnvironments,
+      joinProjectWithCode
+    } from './js/api.js';
     import { renderLoginView, renderRegisterView } from './js/auth.js';
     import { renderOverviewView } from './js/views/overview.js';
     import { renderProjectsView } from './js/views/projects.js';
@@ -209,12 +235,11 @@
     const quickActionBtn = document.getElementById('header-quick-action-btn');
     const quickActionText = document.getElementById('header-quick-action-text');
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 1. Toast Notification Primitive
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    window.showToast = function(title, message, type = 'info', durationMs = 4000) {
+    window.showToast = function (title, message, type = 'info', durationMs = 4000) {
       const container = document.getElementById('toast-container');
       if (!container) return;
+
       const toast = document.createElement('div');
       toast.className = `toast toast-${type}`;
       toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
@@ -246,14 +271,10 @@
       closeBtn.addEventListener('click', dismiss);
       container.appendChild(toast);
 
-      if (durationMs > 0) {
-        setTimeout(dismiss, durationMs);
-      }
+      if (durationMs > 0) setTimeout(dismiss, durationMs);
     };
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 2. Global Accessible Modal Dialog Controller
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const globalModalBackdrop = document.getElementById('global-modal-backdrop');
     const globalModalTitle = document.getElementById('global-modal-title');
     const globalModalBody = document.getElementById('global-modal-body');
@@ -261,7 +282,7 @@
     const globalModalCloseBtn = document.getElementById('global-modal-close-btn');
     let previousActiveElement = null;
 
-    window.openGlobalModal = function(options = {}) {
+    window.openGlobalModal = function (options = {}) {
       previousActiveElement = document.activeElement;
       if (options.title) globalModalTitle.textContent = options.title;
       if (options.bodyHtml) globalModalBody.innerHTML = options.bodyHtml;
@@ -271,16 +292,13 @@
       globalModalBackdrop.classList.add('is-open');
       globalModalBackdrop.setAttribute('aria-hidden', 'false');
 
-      // Autofocus first interactive element
       const firstInput = globalModalBody.querySelector('input, select, textarea, button:not([disabled])');
-      if (firstInput) {
-        setTimeout(() => firstInput.focus(), 50);
-      }
+      if (firstInput) setTimeout(() => firstInput.focus(), 50);
 
       document.addEventListener('keydown', handleModalKeyDown);
     };
 
-    window.closeGlobalModal = function() {
+    window.closeGlobalModal = function () {
       globalModalBackdrop.classList.remove('is-open');
       globalModalBackdrop.style.display = 'none';
       globalModalBackdrop.setAttribute('aria-hidden', 'true');
@@ -289,9 +307,7 @@
     };
 
     function handleModalKeyDown(e) {
-      if (e.key === 'Escape') {
-        window.closeGlobalModal();
-      }
+      if (e.key === 'Escape') window.closeGlobalModal();
     }
 
     globalModalBackdrop.addEventListener('click', (e) => {
@@ -300,10 +316,8 @@
 
     globalModalCloseBtn.addEventListener('click', window.closeGlobalModal);
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // 3. New Project Modal Global Action
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    window.openNewProjectModal = function() {
+    // 3. New Project Modal
+    window.openNewProjectModal = function () {
       window.openGlobalModal({
         title: 'Register New Project',
         bodyHtml: `
@@ -336,6 +350,7 @@
           document.getElementById('modal-project-submit')?.click();
         }
       };
+
       document.getElementById('modal-project-name')?.addEventListener('keydown', handleEnterSubmit);
       document.getElementById('modal-project-desc')?.addEventListener('keydown', handleEnterSubmit);
 
@@ -356,10 +371,8 @@
         submitBtn.innerHTML = '<span class="spinner"></span> Creating...';
 
         try {
-          // 1. Create project via backend API
           const newProj = await createProject({ name, description: desc });
 
-          // 2. Automatically initialize standard environments
           try {
             await createEnvironment(newProj.id, 'Development');
             await createEnvironment(newProj.id, 'Staging');
@@ -370,10 +383,7 @@
 
           window.closeGlobalModal();
           window.showToast('Project Created', `Project "${name}" was created successfully.`, 'success');
-
-          // Switch active context and navigate to variables view
           window.selectProjectAndNavigate(newProj.id, newProj.name, 'variables');
-
         } catch (err) {
           window.showToast('Creation Failed', err.message, 'error');
           submitBtn.disabled = false;
@@ -382,10 +392,8 @@
       });
     };
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 3b. Join Project via Invite Code Modal
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    window.openJoinProjectModal = function() {
+    window.openJoinProjectModal = function () {
       window.openGlobalModal({
         title: 'Join Project with Code',
         bodyHtml: `
@@ -416,6 +424,7 @@
 
       const handleJoin = async () => {
         const code = codeInput.value.trim().toUpperCase();
+
         if (!code) {
           errorEl.textContent = 'Please enter an invite code.';
           errorEl.style.display = 'block';
@@ -431,8 +440,6 @@
           const joinedProj = await joinProjectWithCode(code);
           window.closeGlobalModal();
           window.showToast('Joined Successfully', `You have joined "${joinedProj.name}".`, 'success');
-
-          // Switch context to joined project
           await window.selectProjectAndNavigate(joinedProj.id, joinedProj.name, 'variables');
         } catch (err) {
           submitBtn.disabled = false;
@@ -452,11 +459,10 @@
       submitBtn?.addEventListener('click', handleJoin);
     };
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 3c. Generic Accessible Confirmation Dialog
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    window.openConfirmationModal = function({ title, message, confirmText = 'Delete', isDanger = true, onConfirm }) {
+    window.openConfirmationModal = function ({ title, message, confirmText = 'Delete', isDanger = true, onConfirm }) {
       const confirmBg = isDanger ? 'var(--color-error)' : '#09090b';
+
       window.openGlobalModal({
         title: title || 'Confirm Action',
         bodyHtml: `
@@ -478,6 +484,7 @@
         const btn = document.getElementById('modal-confirm-action-btn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Processing...';
+
         try {
           await onConfirm();
           window.closeGlobalModal();
@@ -489,12 +496,8 @@
       });
     };
 
-
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 4. Project Selection and Navigation Helper
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    window.selectProjectAndNavigate = async function(projectId, projectName, targetRoute = 'variables') {
-      // 1. Ensure selected project is set in the store BEFORE environments are fetched
+    window.selectProjectAndNavigate = async function (projectId, projectName, targetRoute = 'variables') {
       store.setCurrentProject({ id: projectId, name: projectName });
       updateHeaderScope();
 
@@ -518,9 +521,11 @@
 
     function updateHeaderScope() {
       const proj = store.getCurrentProject();
+
       if (proj) {
         headerProjectName.textContent = proj.name;
         const activeEnv = proj.activeEnvironment || store.getActiveEnvironment();
+
         if (activeEnv) {
           headerEnvName.textContent = activeEnv.name;
           const envLow = activeEnv.name.toLowerCase();
@@ -544,18 +549,13 @@
       if (route === 'variables') {
         quickActionText.textContent = 'Add Variable';
         quickActionBtn.onclick = () => window.openAddVariableDialog?.();
-      } else if (route === 'import-export') {
-        quickActionText.textContent = 'New Project';
-        quickActionBtn.onclick = () => window.openNewProjectModal();
       } else {
         quickActionText.textContent = 'New Project';
         quickActionBtn.onclick = () => window.openNewProjectModal();
       }
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // 5. Mobile Drawer & Keyboard Shortcuts
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // 5. Mobile Drawer and Keyboard Shortcuts
     const mobileToggle = document.getElementById('mobile-menu-toggle');
     const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
     const sidebar = document.getElementById('app-sidebar');
@@ -570,7 +570,6 @@
     sidebarCloseBtn?.addEventListener('click', toggleSidebar);
     sidebarBackdrop?.addEventListener('click', toggleSidebar);
 
-    // Close mobile drawer on route link click
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
       link.addEventListener('click', () => {
         if (window.innerWidth <= 1023) {
@@ -580,34 +579,28 @@
       });
     });
 
-    // âŒ˜K Quick Search Shortcut
+    // Command/Ctrl+K Quick Search Shortcut
     window.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        const searchInput = document.getElementById('header-quick-search');
-        if (searchInput) searchInput.focus();
+        document.getElementById('header-quick-search')?.focus();
       }
     });
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // 6. Logout Handler (In-memory token clearance)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // 6. Logout Handlers
     quickLogoutBtn?.addEventListener('click', () => {
       store.clearAuth();
       window.showToast('Logged Out', 'Your session token was securely purged from memory.', 'info');
       router.navigate('login');
     });
 
-    // Sidebar logout button
     document.getElementById('btn-sidebar-logout')?.addEventListener('click', () => {
       store.clearAuth();
       window.showToast('Logged Out', 'Your session token was securely purged from memory.', 'info');
       router.navigate('login');
     });
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // 7. Store Auth Listener: Synchronize UI with In-Memory State
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // 7. Store Auth Listener
     store.subscribe('auth', (auth) => {
       if (auth.isAuthenticated) {
         authContainer.style.display = 'none';
@@ -616,16 +609,18 @@
 
         const email = auth.user?.email || 'engineer@acme.corp';
         userEmailDisplay.textContent = email;
+
         const namePart = email.split('@')[0];
         const displayName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
         const initials = namePart.slice(0, 2).toUpperCase();
+
         userDisplayName.textContent = displayName;
         userAvatarInitials.textContent = initials;
 
-        // Update sidebar user area
         const sidebarName = document.getElementById('sidebar-user-name');
         const sidebarEmail = document.getElementById('sidebar-user-email');
         const sidebarAvatar = document.getElementById('user-avatar-circle-sidebar');
+
         if (sidebarName) sidebarName.textContent = displayName;
         if (sidebarEmail) sidebarEmail.textContent = email;
         if (sidebarAvatar) sidebarAvatar.textContent = initials;
@@ -637,21 +632,15 @@
       }
     });
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // 8. Router Route Registrations
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     router.register('login', {
       requiresAuth: false,
-      handler: () => {
-        renderLoginView(authContainer);
-      }
+      handler: () => renderLoginView(authContainer)
     });
 
     router.register('register', {
       requiresAuth: false,
-      handler: () => {
-        renderRegisterView(authContainer);
-      }
+      handler: () => renderRegisterView(authContainer)
     });
 
     router.register('overview', {
@@ -710,17 +699,12 @@
       }
     });
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // 9. Startup Initialization & Backend Verification
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // 9. Startup Initialization and Backend Verification
     async function initApp() {
-      // Initialize router
       router.init(store.isAuthenticated() ? 'overview' : 'login');
 
-      // Verify backend health
       try {
-        const res = await checkBackendHealth();
-        window.__backendHealth = res;
+        window.__backendHealth = await checkBackendHealth();
       } catch (err) {
         window.__backendHealth = { status: 'offline', error: err.message };
       }
@@ -729,5 +713,5 @@
     initApp();
   </script>
 </body>
-</html>
 
+</html>
