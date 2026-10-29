@@ -115,14 +115,14 @@ def get_variable(
 
 
 def decrypt_stored_value(variable: Variable) -> str:
-    """Decrypt a stored value without exposing ciphertext or plaintext in logs."""
+    """Decrypt a stored value without exposing plaintext or ciphertext in logs."""
     try:
         return decrypt_value(variable.value_ciphertext)
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="A stored variable could not be decrypted.",
-        )
+        ) from None
 
 
 @router.post(
@@ -206,7 +206,7 @@ def create_variable(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not create the variable.",
-        )
+        ) from None
 
     return variable
 
@@ -297,7 +297,7 @@ def update_variable(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not update the variable.",
-        )
+        ) from None
 
     return variable
 
@@ -344,7 +344,7 @@ def reveal_variable(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not record the reveal event.",
-        )
+        ) from None
 
     return VariableRevealResponse(key=variable.key, value=plaintext)
 
@@ -392,7 +392,7 @@ def delete_variable(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not delete the variable.",
-        )
+        ) from None
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -429,6 +429,7 @@ def get_variable_history(
     ]
 
 
+# IMPORTANT: This route uses GET. The frontend must also send GET.
 @router.get(
     "/{variable_id}/history/{version_id}/reveal",
     response_model=VariableRevealResponse,
@@ -464,7 +465,13 @@ def reveal_variable_history(
 
     try:
         plaintext = decrypt_value(version.value_ciphertext)
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not decrypt the historical value.",
+        ) from None
 
+    try:
         db.add(
             AuditEvent(
                 user_id=current_user.id,
@@ -480,18 +487,12 @@ def reveal_variable_history(
         )
         db.commit()
 
-    except ValueError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Could not decrypt the historical value.",
-        )
     except SQLAlchemyError:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not record the historical reveal.",
-        )
+        ) from None
 
     return VariableRevealResponse(key=variable.key, value=plaintext)
 
@@ -650,6 +651,7 @@ def import_env_file(
 
     updates = []
     unchanged_keys = []
+
     for item in parsed["variables"]:
         existing = active_by_key.get(item["key"])
         if existing is None:
@@ -682,7 +684,6 @@ def import_env_file(
         for item in parsed["variables"]:
             key = item["key"]
             value = item["value"]
-
             existing = active_by_key.get(key)
 
             if existing is not None and key in unchanged_keys:
@@ -776,7 +777,7 @@ def import_env_file(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="The import failed. No variables were saved.",
-        )
+        ) from None
 
     return {
         "message": "Variables imported successfully.",
@@ -789,4 +790,4 @@ def import_env_file(
             {"key": key, "is_sensitive": True}
             for key in imported_keys
         ],
-   }
+    }
