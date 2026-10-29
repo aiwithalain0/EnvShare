@@ -109,7 +109,7 @@ async function apiRequest(endpoint, options = {}) {
 
   if (!response.ok) {
     if (response.status === 401) {
-      store.clearAuthToken();
+      store.clearAuth();
     }
 
     throw new ApiError(
