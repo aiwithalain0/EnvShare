@@ -10,7 +10,8 @@ from project_routes import router as project_router
 from environment_routes import router as environment_router
 from variable_routes import router as variable_router
 
-# Ensure all database tables exist (including newly introduced InviteCode)
+
+# Ensure all database tables exist, including InviteCode.
 Base.metadata.create_all(bind=engine)
 
 
@@ -23,21 +24,23 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Frontend origins allowed to communicate with the backend.
-# Replace YOUR_LAPTOP_IP with your laptop's actual IPv4 address.
+
+# Allow requests from local development and the deployed frontend.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5500",
         "http://127.0.0.1:5500",
         "http://192.168.0.100:5500",
+        "https://envshare-frontend-one.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
-# Register existing API routers.
+
+# Register API routers.
 app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(environment_router)
