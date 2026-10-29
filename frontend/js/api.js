@@ -23,6 +23,36 @@ export class ApiError extends Error {
   }
 }
 
+function getErrorMessage(data, status) {
+  const rawMessage = data?.detail ?? data?.message;
+
+  if (typeof rawMessage === 'string' && rawMessage.trim()) {
+    return rawMessage;
+  }
+
+  if (Array.isArray(rawMessage)) {
+    return rawMessage
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item;
+        }
+
+        if (item && typeof item === 'object') {
+          return item.msg || item.message || JSON.stringify(item);
+        }
+
+        return String(item);
+      })
+      .join('; ');
+  }
+
+  if (rawMessage && typeof rawMessage === 'object') {
+    return rawMessage.message || rawMessage.msg || JSON.stringify(rawMessage);
+  }
+
+  return `Request failed with status ${status}.`;
+}
+
 async function apiRequest(endpoint, options = {}) {
   if (!API_BASE_URL) {
     throw new ApiError(
@@ -53,7 +83,7 @@ async function apiRequest(endpoint, options = {}) {
     });
   } catch (error) {
     throw new ApiError(
-      'Unable to connect to the EnvShare backend. Check that the backend is running.',
+      'Unable to connect to the EnvShare backend. Check your internet connection and try again.',
       0,
       error
     );
@@ -67,10 +97,14 @@ async function apiRequest(endpoint, options = {}) {
   let data = null;
 
   if (contentType.includes('application/json')) {
-    data = await response.json();
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
   } else {
-    const text = await response.text();
-    data = text ? { detail: text } : null;
+    const responseText = await response.text();
+    data = responseText ? { detail: responseText } : null;
   }
 
   if (!response.ok) {
@@ -78,12 +112,11 @@ async function apiRequest(endpoint, options = {}) {
       store.clearAuthToken();
     }
 
-    const message =
-      data?.detail ||
-      data?.message ||
-      `Request failed with status ${response.status}.`;
-
-    throw new ApiError(message, response.status, data);
+    throw new ApiError(
+      getErrorMessage(data, response.status),
+      response.status,
+      data
+    );
   }
 
   return data;
@@ -168,38 +201,67 @@ export async function createVariable(
   );
 }
 
-export async function revealVariable(projectId, variableId) {
-  return apiRequest(`/projects/${projectId}/variables/${variableId}/reveal`, {
-    method: 'POST',
-  });
+export async function revealVariable(
+  projectId,
+  environmentId,
+  variableId
+) {
+  return apiRequest(
+    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}/reveal`,
+    {
+      method: 'GET',
+    }
+  );
 }
 
-export async function updateVariable(projectId, variableId, variableData) {
-  return apiRequest(`/projects/${projectId}/variables/${variableId}`, {
-    method: 'PUT',
-    body: JSON.stringify(variableData),
-  });
+export async function updateVariable(
+  projectId,
+  environmentId,
+  variableId,
+  variableData
+) {
+  return apiRequest(
+    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify(variableData),
+    }
+  );
 }
 
-export async function deleteVariable(projectId, variableId) {
-  return apiRequest(`/projects/${projectId}/variables/${variableId}`, {
-    method: 'DELETE',
-  });
+export async function deleteVariable(
+  projectId,
+  environmentId,
+  variableId
+) {
+  return apiRequest(
+    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}`,
+    {
+      method: 'DELETE',
+    }
+  );
 }
 
-export async function getVariableHistory(projectId, variableId) {
-  return apiRequest(`/projects/${projectId}/variables/${variableId}/history`);
+export async function getVariableHistory(
+  projectId,
+  environmentId,
+  variableId
+) {
+  return apiRequest(
+    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}/history`
+  );
 }
 
 export async function revealVariableHistory(
   projectId,
+  environmentId,
   variableId,
   versionId
 ) {
   return apiRequest(
-    `/projects/${projectId}/variables/${variableId}/history/${versionId}/reveal`,
+    `/projects/${projectId}/environments/${environmentId}/variables/${variableId}/history/${versionId}/reveal`,
     {
-      method: 'POST',
+      method: 'GET',
     }
   );
 }
@@ -210,7 +272,7 @@ export async function previewEnvImport(
   importData
 ) {
   return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/import/preview`,
+    `/projects/${projectId}/environments/${environmentId}/variables/import/preview`,
     {
       method: 'POST',
       body: JSON.stringify(importData),
@@ -221,13 +283,19 @@ export async function previewEnvImport(
 export async function commitEnvImport(
   projectId,
   environmentId,
-  importData
+  content,
+  confirmImport = true,
+  overwriteExisting = false
 ) {
   return apiRequest(
-    `/projects/${projectId}/environments/${environmentId}/import`,
+    `/projects/${projectId}/environments/${environmentId}/variables/import`,
     {
       method: 'POST',
-      body: JSON.stringify(importData),
+      body: JSON.stringify({
+        content,
+        confirm_import: confirmImport,
+        overwrite_existing: overwriteExisting,
+      }),
     }
   );
 }
