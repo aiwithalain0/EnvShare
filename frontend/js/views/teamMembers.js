@@ -486,7 +486,11 @@ export async function renderTeamMembersView(container) {
       generateBtn.innerHTML = '<span class="spinner"></span> Generating...';
 
       try {
-        const invite = await createInviteCode(pId, role, maxUses, expiresInDays);
+        const invite = await createInviteCode(pId, {
+          role,
+          max_uses: maxUses,
+          expires_in_days: expiresInDays,
+        });
         formContainer.style.display = 'none';
         resultContainer.style.display = 'flex';
         codeDisplay.value = invite.code;
