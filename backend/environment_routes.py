@@ -8,6 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from database import get_db
+from file_models import CommitFile, EnvironmentFile, FileCommit, FileVersion
 from dependencies import get_current_user
 from models import (
     AuditEvent,
@@ -538,6 +539,44 @@ def delete_environment(
             for ver in versions:
                 db.delete(ver)
             db.delete(var)
+
+        files = list(
+            db.scalars(
+                select(EnvironmentFile).where(
+                    EnvironmentFile.environment_id == environment.id
+                )
+            ).all()
+        )
+        file_ids = [item.id for item in files]
+
+        if file_ids:
+            commits = list(
+                db.scalars(
+                    select(FileCommit).where(
+                        FileCommit.environment_id == environment.id
+                    )
+                ).all()
+            )
+
+            for item in db.scalars(
+                select(CommitFile).where(
+                    CommitFile.file_id.in_(file_ids)
+                )
+            ).all():
+                db.delete(item)
+
+            for item in db.scalars(
+                select(FileVersion).where(
+                    FileVersion.file_id.in_(file_ids)
+                )
+            ).all():
+                db.delete(item)
+
+            for item in commits:
+                db.delete(item)
+
+            for item in files:
+                db.delete(item)
 
         db.add(
             AuditEvent(

@@ -1,9 +1,10 @@
-
+﻿
 /**
  * EnvShare Environment Variable Management View
  */
 
 import { store } from '../store.js';
+import { mountEnvironmentFiles } from './environmentFiles.js';
 import {
   listProjects,
   listEnvironments,
@@ -113,6 +114,8 @@ export async function renderVariablesView(container) {
       <div style="padding:var(--space-sm);color:var(--color-text-secondary)">Loading environments...</div>
     </div>
 
+    <div id="environment-files-panel"></div>
+
     <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);padding-top:4px">
       <div style="position:relative;width:100%;max-width:380px">
         <span class="material-symbols-outlined" style="position:absolute;left:10px;top:9px;font-size:17px;color:var(--color-text-muted)">search</span>
@@ -209,6 +212,12 @@ export async function renderVariablesView(container) {
 
   document.getElementById('var-delete-env-btn')?.addEventListener('click', deleteActiveEnvironment);
 
+  async function loadEnvironmentFiles() {
+    const panel = document.getElementById('environment-files-panel');
+    if (!panel) return;
+
+    mountEnvironmentFiles(panel, activeProject.id, () => activeEnv?.id);
+  }
   async function loadEnvironments() {
     try {
       environments = await listEnvironments(activeProject.id);
@@ -237,6 +246,8 @@ export async function renderVariablesView(container) {
       } else {
         renderNoEnvironment();
       }
+
+      await loadEnvironmentFiles();
     } catch (error) {
       const tabsBar = document.getElementById('var-env-tabs-bar');
 
@@ -305,6 +316,7 @@ export async function renderVariablesView(container) {
           store.setActiveEnvironment(activeEnv);
           renderEnvironmentTabs();
           await loadVariables();
+          await loadEnvironmentFiles();
         }
       });
     });
@@ -498,18 +510,18 @@ export async function renderVariablesView(container) {
             ${isRevealed ? `
               <span class="secret-revealed-value">${escapeHtml(revealed.value)}</span>
               <span class="auto-mask-countdown" id="countdown-${variable.id}">Auto-masks in ${revealed.secondsLeft}s</span>
-              <button class="btn btn-ghost btn-sm btn-icon" title="Mask value" data-action="mask" data-id="${variable.id}">◉</button>
+              <button class="btn btn-ghost btn-sm btn-icon" title="Mask value" data-action="mask" data-id="${variable.id}">\u25c9</button>
             ` : `
-              <span class="secret-dots">••••••••••••••••••••</span>
-              <button class="btn btn-ghost btn-sm btn-icon" title="Reveal value" data-action="reveal" data-id="${variable.id}">◉</button>
+              <span class="secret-dots">\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022</span>
+              <button class="btn btn-ghost btn-sm btn-icon" title="Reveal value" data-action="reveal" data-id="${variable.id}">\u25c9</button>
             `}
-            <button class="btn btn-ghost btn-sm btn-icon" title="Copy value" data-action="copy" data-id="${variable.id}">▣</button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Copy value" data-action="copy" data-id="${variable.id}">â–£</button>
           </div></td>
           <td><button class="btn btn-secondary btn-sm" data-action="history" data-id="${variable.id}">History</button></td>
           <td><div style="font-size:12px;color:var(--color-text-secondary)">${formatDate(variable.updated_at || variable.created_at)}</div></td>
           <td style="text-align:right"><div style="display:flex;justify-content:flex-end;gap:4px">
-            <button class="btn btn-ghost btn-sm btn-icon" title="Edit" data-action="edit" data-id="${variable.id}">✎</button>
-            <button class="btn btn-ghost btn-sm btn-icon" title="Delete" data-action="delete" data-id="${variable.id}">⌫</button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Edit" data-action="edit" data-id="${variable.id}">\u270e</button>
+            <button class="btn btn-ghost btn-sm btn-icon" title="Delete" data-action="delete" data-id="${variable.id}">\u232b</button>
           </div></td>
         </tr>
       `;
@@ -526,7 +538,7 @@ export async function renderVariablesView(container) {
             <span class="badge badge-code">${variable.is_sensitive === false ? 'Plaintext' : 'Sensitive'}</span>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px;border:1px solid var(--color-border);border-radius:var(--radius-sm)">
-            <span style="overflow-wrap:anywhere">${isRevealed ? escapeHtml(revealed.value) : '••••••••••••••••'}</span>
+            <span style="overflow-wrap:anywhere">${isRevealed ? escapeHtml(revealed.value) : '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'}</span>
             <button class="btn btn-ghost btn-sm" data-action="${isRevealed ? 'mask' : 'reveal'}" data-id="${variable.id}">${isRevealed ? 'Mask' : 'Reveal'}</button>
             <button class="btn btn-ghost btn-sm" data-action="copy" data-id="${variable.id}">Copy</button>
           </div>
@@ -877,7 +889,7 @@ export async function renderVariablesView(container) {
       const button = body.querySelector(`#history-reveal-${versionId}`);
 
       if (valueElement) {
-        valueElement.textContent = '••••••••••••••••••••';
+        valueElement.textContent = '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022';
         valueElement.style.display = 'none';
       }
 
@@ -1013,10 +1025,10 @@ export async function renderVariablesView(container) {
 }
 
 function formatDate(value) {
-  if (!value) return '—';
+  if (!value) return 'â€”';
 
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? 'â€”' : date.toLocaleDateString();
 }
 
 function formatDateTime(value) {
@@ -1036,3 +1048,6 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+
+

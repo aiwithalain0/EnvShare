@@ -13,6 +13,7 @@ import {
   revealVariable,
   previewEnvImport,
   commitEnvImport,
+  createEnvironmentFileCommit,
 } from '../api.js';
 
 export async function renderImportExportView(container) {
@@ -62,6 +63,8 @@ export async function renderImportExportView(container) {
   let previewData = null;
   let rawContent = '';
   let activeInputMode = 'upload';
+  let activeImportType = 'variables';
+  let selectedUploadName = '.env';
 
   renderMainLayout();
 
@@ -92,7 +95,14 @@ export async function renderImportExportView(container) {
               <div style="display:flex;flex-direction:column;gap:.5rem;border-bottom:1px solid var(--color-border);padding-bottom:1rem;">
                 <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
                   <h2 style="font-size:16px;font-weight:600;color:var(--color-text-primary);margin:0;">Import Variables</h2>
-                  <div style="display:flex;align-items:center;background:var(--color-surface-container-low);border-radius:var(--radius-md);padding:2px;border:1px solid var(--color-border);">
+                  <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+                  <label for="import-type-select" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);">Import Mode</label>
+                  <select id="import-type-select" class="input-control" style="height:38px;width:100%;">
+                    <option value="variables">Import as Variables</option>
+                    <option value="file">Import as File (.env)</option>
+                  </select>
+                </div>
+                <div style="display:flex;align-items:center;background:var(--color-surface-container-low);border-radius:var(--radius-md);padding:2px;border:1px solid var(--color-border);">
                     <button id="tab-upload" type="button" style="padding:4px 12px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:none;cursor:pointer;background:var(--color-surface-container-lowest);color:var(--color-text-primary);">Upload File</button>
                     <button id="tab-paste" type="button" style="padding:4px 12px;font-size:12px;font-weight:500;border-radius:var(--radius-sm);border:none;cursor:pointer;background:transparent;color:var(--color-text-secondary);">Paste Content</button>
                   </div>
@@ -130,11 +140,15 @@ export async function renderImportExportView(container) {
                 </div>
               </div>
 
+              <div id="file-import-options" style="display:none;flex-direction:column;gap:.75rem;">
+                <div><label for="import-file-name" style="display:block;font-size:12px;margin-bottom:6px;">Filename</label><input id="import-file-name" class="input-control font-mono" value=".env" maxlength="255" style="width:100%;height:38px;"></div>
+                <div><label for="import-commit-message" style="display:block;font-size:12px;margin-bottom:6px;">Commit message</label><input id="import-commit-message" class="input-control" value="Import environment file" maxlength="200" style="width:100%;height:38px;"></div>
+              </div>
               <div id="paste-panel" style="display:none;flex-direction:column;gap:.5rem;">
-                <textarea id="import-raw-textarea" class="input-control font-mono" placeholder="DATABASE_URL=your_database_url&#10;API_KEY=your_api_key&#10;PORT=8000" style="min-height:180px;font-size:12px;line-height:1.5;border-radius:var(--radius-md);"></textarea>
+                <textarea id="import-raw-textarea" class="input-control font-mono" placeholder="DATABASE_URL=your_database_url&#10;API_KEY=your_api_key&#10;PORT=8000" style="width:100%;min-height:420px;height:420px;resize:vertical;font-size:13px;line-height:1.6;border-radius:var(--radius-md);"></textarea>
               </div>
 
-              <div style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);display:flex;flex-direction:column;gap:10px;">
+              <div id="overwrite-options" style="padding:12px;border:1px solid var(--color-border);border-radius:var(--radius-md);display:flex;flex-direction:column;gap:10px;">
                 <label for="overwrite-existing-checkbox" style="display:flex;align-items:flex-start;gap:9px;cursor:pointer;">
                   <input id="overwrite-existing-checkbox" type="checkbox" style="margin-top:3px;accent-color:#09090b;">
                   <span>
@@ -230,6 +244,21 @@ export async function renderImportExportView(container) {
     const exportEnvSelect = document.getElementById('export-source-env-select');
     const overwriteCheckbox = document.getElementById('overwrite-existing-checkbox');
     const overwriteWarning = document.getElementById('overwrite-warning');
+    const importTypeSelect = document.getElementById('import-type-select');
+    const fileImportOptions = document.getElementById('file-import-options');
+    const overwriteOptions = document.getElementById('overwrite-options');
+    const previewButton = document.getElementById('btn-preview-import');
+
+    function updateImportType() {
+      activeImportType = importTypeSelect.value;
+      fileImportOptions.style.display = activeImportType === 'file' ? 'flex' : 'none';
+      overwriteOptions.style.display = activeImportType === 'file' ? 'none' : 'flex';
+      previewButton.querySelector('span').textContent =
+        activeImportType === 'file' ? 'Import File' : 'Preview Import';
+    }
+
+    importTypeSelect?.addEventListener('change', updateImportType);
+    updateImportType();
 
     tabUpload?.addEventListener('click', () => {
       activeInputMode = 'upload';
@@ -310,6 +339,8 @@ export async function renderImportExportView(container) {
       }
 
       fileNameLabel.textContent = file.name;
+      const filenameInput = document.getElementById('import-file-name');
+      if (filenameInput) filenameInput.value = file.name;
       fileSizeLabel.textContent = `(${(file.size / 1024).toFixed(1)} KB)`;
       fileInfoPill.style.display = 'flex';
 
@@ -339,6 +370,51 @@ export async function renderImportExportView(container) {
 
       if (!rawContent.trim()) {
         window.showToast?.('No Content', 'Select a .env file or paste content to preview.', 'error');
+        return;
+      }
+
+      if (activeImportType === 'file') {
+        const filename = document.getElementById('import-file-name')?.value.trim();
+        const message = document.getElementById('import-commit-message')?.value.trim();
+
+        if (!filename || !message) {
+          window.showToast?.('Missing Details', 'Enter a filename and commit message.', 'error');
+          return;
+        }
+
+        try {
+          const button = document.getElementById('btn-preview-import');
+          button.disabled = true;
+          button.querySelector('span').textContent = 'Importing File...';
+
+          const result = await createEnvironmentFileCommit(
+            activeProject.id,
+            selectedEnvId,
+            message,
+            [{ filename, content: rawContent }]
+          );
+
+          window.showToast?.(
+            'File Imported',
+            result.message || `${filename} was added to Environment Files.`,
+            'success'
+          );
+
+          document.getElementById('import-preview-section').innerHTML = `
+            <div class="empty-state-card" style="padding:2rem;background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-lg);margin-top:1rem;">
+              <h3 class="font-headline-md">Environment File Imported</h3>
+              <p class="font-body-sm">${escapeHtml(filename)} was saved as a complete versioned file.</p>
+              <p class="font-body-sm">Commit: ${escapeHtml(message)}</p>
+            </div>`;
+        } catch (error) {
+          window.showToast?.('File Import Failed', error.message, 'error');
+        } finally {
+          const button = document.getElementById('btn-preview-import');
+          if (button) {
+            button.disabled = false;
+            button.querySelector('span').textContent = 'Import File';
+          }
+        }
         return;
       }
 
@@ -475,7 +551,7 @@ export async function renderImportExportView(container) {
           <tr style="border-bottom:1px solid var(--color-border);">
             <td style="padding:10px 16px;font-family:var(--font-mono);font-weight:500;color:var(--color-text-primary);">${escapeHtml(variable.key)}</td>
             <td style="padding:10px 16px;"><span class="badge ${badgeClass} badge-code">${label}</span></td>
-            <td style="padding:10px 16px;text-align:right;font-family:var(--font-mono);color:var(--color-text-muted);letter-spacing:.1em;user-select:none;">â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢</td>
+            <td style="padding:10px 16px;text-align:right;font-family:var(--font-mono);color:var(--color-text-muted);letter-spacing:.1em;user-select:none;">••••••••••••</td>
           </tr>`;
     }).join('');
 
@@ -485,7 +561,7 @@ export async function renderImportExportView(container) {
             <div>
               <h3 style="font-size:14px;font-weight:600;color:var(--color-text-primary);margin:0;">Import Preview (${total} keys found)</h3>
               <p style="font-size:12px;color:var(--color-text-secondary);margin:4px 0 0;">
-                ${newCount} new Â· ${updateCount} changed Â· ${unchangedCount} unchanged Â· ${restoreCount} to restore
+                ${newCount} new · ${updateCount} changed · ${unchangedCount} unchanged · ${restoreCount} to restore
               </p>
               <p style="font-size:12px;color:var(--color-text-secondary);margin:4px 0 0;">
                 ${conflictCount
@@ -579,7 +655,7 @@ export async function renderImportExportView(container) {
               </div>
               <h3 class="font-headline-md" style="margin:.5rem 0 .25rem;color:var(--color-text-primary);">Import Completed Successfully</h3>
               <p class="font-body-sm" style="color:var(--color-text-secondary);max-width:440px;margin:0 auto 1rem;">
-                ${result.created_count ?? newCount} created Â· ${result.updated_count ?? updateCount} updated Â· ${unchangedResult} unchanged Â· ${result.restored_count ?? restoreCount} restored.
+                ${result.created_count ?? newCount} created · ${result.updated_count ?? updateCount} updated · ${unchangedResult} unchanged · ${result.restored_count ?? restoreCount} restored.
               </p>
               <button id="btn-view-variables" class="btn btn-primary" type="button" style="height:36px;padding:0 16px;background:#09090b;color:#fff;border-radius:var(--radius-md);">
                 <span>View in Variables</span>
@@ -630,3 +706,7 @@ function escapeHtml(value) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+
+
+

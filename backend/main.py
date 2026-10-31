@@ -1,14 +1,16 @@
-
+﻿
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from database import Base, engine
 import models
+import file_models
 from auth_routes import router as auth_router
 from project_routes import router as project_router
 from environment_routes import router as environment_router
 from variable_routes import router as variable_router
+from file_routes import router as file_router
 
 
 # Ensure all database tables exist, including InviteCode.
@@ -45,6 +47,7 @@ app.include_router(auth_router)
 app.include_router(project_router)
 app.include_router(environment_router)
 app.include_router(variable_router)
+app.include_router(file_router)
 
 
 @app.get("/")
@@ -85,3 +88,5 @@ def custom_openapi():
 
 
 app.openapi = custom_openapi
+
+

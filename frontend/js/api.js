@@ -1,4 +1,4 @@
-
+﻿
 import { store } from './store.js';
 
 const configuredApiUrl = window.ENVSHARE_API_URL;
@@ -347,3 +347,123 @@ export async function joinProjectWithCode(inviteCode) {
     body: JSON.stringify({ code: inviteCode }),
   });
 }
+
+
+// Environment file version control
+
+function environmentFilesEndpoint(projectId, environmentId) {
+  return `/projects/${projectId}/environments/${environmentId}/files`;
+}
+
+export async function listEnvironmentFiles(projectId, environmentId) {
+  return apiRequest(environmentFilesEndpoint(projectId, environmentId));
+}
+
+export async function getEnvironmentFileContent(
+  projectId,
+  environmentId,
+  fileId
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/content`
+  );
+}
+
+export async function createEnvironmentFileCommit(
+  projectId,
+  environmentId,
+  message,
+  changes
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/commits`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ message, changes }),
+    }
+  );
+}
+
+export async function listEnvironmentFileCommits(projectId, environmentId) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/commits`
+  );
+}
+
+export async function getEnvironmentFileHistory(
+  projectId,
+  environmentId,
+  fileId
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/history`
+  );
+}
+
+export async function getEnvironmentFileVersion(
+  projectId,
+  environmentId,
+  fileId,
+  versionNumber
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/versions/${versionNumber}`
+  );
+}
+
+export async function compareEnvironmentFileVersions(
+  projectId,
+  environmentId,
+  fileId,
+  fromVersion,
+  toVersion
+) {
+  const params = new URLSearchParams({
+    from_version: String(fromVersion),
+    to_version: String(toVersion),
+  });
+
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/compare?${params}`
+  );
+}
+
+export async function renameEnvironmentFile(
+  projectId,
+  environmentId,
+  fileId,
+  filename,
+  message = 'Rename file'
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/rename`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ filename, message }),
+    }
+  );
+}
+
+export async function deleteEnvironmentFile(projectId, environmentId, fileId) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}`,
+    {
+      method: 'DELETE',
+    }
+  );
+}
+
+export async function restoreEnvironmentFile(
+  projectId,
+  environmentId,
+  fileId
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/restore`,
+    {
+      method: 'POST',
+    }
+  );
+}
+
+

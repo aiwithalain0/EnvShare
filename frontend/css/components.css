@@ -1220,3 +1220,29 @@ textarea.input-control {
     justify-content: space-between;
   }
 }
+
+/* Large modal for environment file history and version viewing */
+.modal-container {
+  width: min(96vw, 1200px);
+  max-width: 1200px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-dialog);
+}
+
+.modal-container .modal-body {
+  min-height: 0;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+  .modal-container {
+    width: 96vw;
+    max-height: 94vh;
+  }
+}
