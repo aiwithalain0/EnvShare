@@ -5,7 +5,7 @@
 
 import { store } from '../store.js';
 import { router } from '../router.js';
-import { checkBackendHealth, deleteProject } from '../api.js';
+import { checkBackendHealth, deleteProject, logoutUser } from '../api.js';
 
 export async function renderSettingsView(container) {
   const state = store.getState();
@@ -201,12 +201,18 @@ export async function renderSettingsView(container) {
   }
 
   // Hook Sign Out
-  document.getElementById('btn-settings-signout')?.addEventListener('click', () => {
-    store.clearAuth();
-    if (window.showToast) {
-      window.showToast('Signed Out', 'Your session tokens have been cleared from memory.', 'info');
+  document.getElementById('btn-settings-signout')?.addEventListener('click', async () => {
+    try {
+      await logoutUser();
+    } catch (err) {
+      // Clear local authentication even if the backend is unavailable.
+    } finally {
+      store.clearAuth();
+      if (window.showToast) {
+        window.showToast('Signed Out', 'Your session has been cleared.', 'info');
+      }
+      router.navigate('login');
     }
-    router.navigate('login');
   });
 }
 

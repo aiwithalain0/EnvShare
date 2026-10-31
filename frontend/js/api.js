@@ -1,3 +1,4 @@
+
 import { store } from './store.js';
 
 const configuredApiUrl = window.ENVSHARE_API_URL;
@@ -79,6 +80,7 @@ async function apiRequest(endpoint, options = {}) {
   try {
     response = await fetch(url, {
       ...options,
+      credentials: options.credentials ?? 'include',
       headers,
     });
   } catch (error) {
@@ -137,6 +139,18 @@ export async function loginUser(credentials) {
   return apiRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify(credentials),
+  });
+}
+
+export async function refreshAccessToken() {
+  return apiRequest('/auth/refresh', {
+    method: 'POST',
+  });
+}
+
+export async function logoutUser() {
+  return apiRequest('/auth/logout', {
+    method: 'POST',
   });
 }
 

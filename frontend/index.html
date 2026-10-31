@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>EnvShare — Enterprise Environment Security &amp; Secrets Management</title>
+  <title>EnvShare â€” Enterprise Environment Security &amp; Secrets Management</title>
   <meta name="description"
     content="Precision engineering environment variable and secret management for high-assurance development teams.">
 
@@ -131,7 +131,7 @@
           <!-- Quick Search -->
           <div class="header-search">
             <span class="material-symbols-outlined" style="font-size: 16px;">search</span>
-            <input id="header-quick-search" type="text" placeholder="Search variables, keys... (⌘K)"
+            <input id="header-quick-search" type="text" placeholder="Search variables, keys... (âŒ˜K)"
               aria-label="Search variables and keys">
           </div>
 
@@ -193,8 +193,8 @@
   <!-- EnvShare Backend API -->
   <script>
     window.ENVSHARE_API_URL = ['localhost', '127.0.0.1'].includes(window.location.hostname)
-      ? 'http://127.0.0.1:8000'
-      : 'https://envshare-tau-six.vercel.app';
+      ? `http://${window.location.hostname}:8000`
+      : '/api';
   </script>
 
   <!-- Application Bootstrap Module -->
@@ -203,6 +203,8 @@
     import { router } from './js/router.js';
     import {
       checkBackendHealth,
+      refreshAccessToken,
+      logoutUser,
       listProjects,
       createProject,
       createEnvironment,
@@ -588,17 +590,21 @@
     });
 
     // 6. Logout Handlers
-    quickLogoutBtn?.addEventListener('click', () => {
-      store.clearAuth();
-      window.showToast('Logged Out', 'Your session token was securely purged from memory.', 'info');
-      router.navigate('login');
-    });
+    async function handleLogout() {
+      try {
+        await logoutUser();
+      } catch (err) {
+        // Clear local authentication even if the backend is unavailable.
+      } finally {
+        store.clearAuth();
+        window.showToast('Logged Out', 'Your session has been cleared.', 'info');
+        router.navigate('login');
+      }
+    }
 
-    document.getElementById('btn-sidebar-logout')?.addEventListener('click', () => {
-      store.clearAuth();
-      window.showToast('Logged Out', 'Your session token was securely purged from memory.', 'info');
-      router.navigate('login');
-    });
+    quickLogoutBtn?.addEventListener('click', handleLogout);
+
+    document.getElementById('btn-sidebar-logout')?.addEventListener('click', handleLogout);
 
     // 7. Store Auth Listener
     store.subscribe('auth', (auth) => {
@@ -701,6 +707,13 @@
 
     // 9. Startup Initialization and Backend Verification
     async function initApp() {
+      try {
+        const response = await refreshAccessToken();
+        store.setAuth(response.access_token, null);
+      } catch (err) {
+        store.clearAuth();
+      }
+
       router.init(store.isAuthenticated() ? 'overview' : 'login');
 
       try {
@@ -715,3 +728,4 @@
 </body>
 
 </html>
+
