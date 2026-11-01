@@ -14,6 +14,7 @@ import {
   previewEnvImport,
   commitEnvImport,
   createEnvironmentFileCommit,
+  previewEnvironmentFile,
 } from '../api.js';
 
 export async function renderImportExportView(container) {
@@ -376,45 +377,126 @@ export async function renderImportExportView(container) {
       if (activeImportType === 'file') {
         const filename = document.getElementById('import-file-name')?.value.trim();
         const message = document.getElementById('import-commit-message')?.value.trim();
+        const button = document.getElementById('btn-preview-import');
+        const previewSection = document.getElementById('import-preview-section');
 
         if (!filename || !message) {
           window.showToast?.('Missing Details', 'Enter a filename and commit message.', 'error');
           return;
         }
 
-        try {
-          const button = document.getElementById('btn-preview-import');
-          button.disabled = true;
-          button.querySelector('span').textContent = 'Importing File...';
+        const escapePreview = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;',
+        })[char]);
 
-          const result = await createEnvironmentFileCommit(
+        try {
+          button.disabled = true;
+          button.querySelector('span').textContent = 'Validating File...';
+
+          const preview = await previewEnvironmentFile(
             activeProject.id,
             selectedEnvId,
-            message,
-            [{ filename, content: rawContent }]
+            rawContent
           );
 
-          window.showToast?.(
-            'File Imported',
-            result.message || `${filename} was added to Environment Files.`,
-            'success'
-          );
+          const variables = preview.variables || [];
+          const errors = preview.errors || [];
 
-          document.getElementById('import-preview-section').innerHTML = `
-            <div class="empty-state-card" style="padding:2rem;background:#fff;border:1px solid var(--color-border);border-radius:var(--radius-lg);margin-top:1rem;">
-              <h3 class="font-headline-md">Environment File Imported</h3>
-              <p class="font-body-sm">${escapeHtml(filename)} was saved as a complete versioned file.</p>
-              <p class="font-body-sm">Commit: ${escapeHtml(message)}</p>
-            </div>`;
-        } catch (error) {
-          window.showToast?.('File Import Failed', error.message, 'error');
-        } finally {
-          const button = document.getElementById('btn-preview-import');
-          if (button) {
-            button.disabled = false;
-            button.querySelector('span').textContent = 'Import File';
+          previewSection.innerHTML = `
+            <section class="table-surface-card" style="margin-top:1rem;padding:1.25rem;border:1px solid var(--color-border);border-radius:var(--radius-lg);">
+              <h3 class="font-headline-md" style="margin:0 0 .75rem;">File Import Preview</h3>
+              <div style="display:flex;gap:1rem;flex-wrap:wrap;font-size:13px;margin-bottom:1rem;">
+                <span>Total variables: <strong>${Number(preview.variable_count || 0)}</strong></span>
+                <span>Sensitive variables: <strong>${Number(preview.sensitive_count || 0)}</strong></span>
+              </div>
+              ${errors.length ? `
+                <div style="padding:.75rem;margin-bottom:1rem;border:1px solid var(--color-error);border-radius:var(--radius-md);color:var(--color-error);">
+                  <strong>Validation errors</strong>
+                  <ul style="margin:.5rem 0 0;padding-left:1.25rem;">
+                    ${errors.map(error => `<li>${escapePreview(error)}</li>`).join('')}
+                  </ul>
+                </div>
+              ` : ''}
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                  <thead>
+                    <tr style="text-align:left;border-bottom:1px solid var(--color-border);">
+                      <th style="padding:8px;">Variable</th>
+                      <th style="padding:8px;">Value</th>
+                      <th style="padding:8px;">Classification</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${variables.map(item => `
+                      <tr style="border-bottom:1px solid var(--color-border);">
+                        <td style="padding:8px;font-family:monospace;">${escapePreview(item.key)}</td>
+                        <td style="padding:8px;font-family:monospace;overflow-wrap:anywhere;">${escapePreview(item.value)}</td>
+                        <td style="padding:8px;">${item.sensitive ? 'Sensitive' : 'Normal'}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:1rem;">
+                <button id="btn-confirm-file-import" class="btn btn-primary" type="button"
+                  ${preview.valid && variables.length ? '' : 'disabled'}>
+                  Confirm and Import File
+                </button>
+              </div>
+            </section>
+          `;
+
+          if (!preview.valid || !variables.length) {
+            window.showToast?.(
+              'Import Cannot Continue',
+              errors.join('; ') || 'No valid variables were found.',
+              'error'
+            );
+            return;
           }
+
+          document.getElementById('btn-confirm-file-import').addEventListener('click', async event => {
+            const confirmButton = event.currentTarget;
+            confirmButton.disabled = true;
+            confirmButton.textContent = 'Importing...';
+
+            try {
+              const result = await createEnvironmentFileCommit(
+                activeProject.id,
+                selectedEnvId,
+                message,
+                [{ filename, content: rawContent }]
+              );
+
+              window.showToast?.(
+                'File Imported',
+                result.message || `${filename} was saved as a complete versioned file.`,
+                'success'
+              );
+
+              previewSection.innerHTML = `
+                <div class="empty-state-card" style="padding:2rem;background:var(--color-surface-container-lowest);border:1px solid var(--color-border);border-radius:var(--radius-lg);margin-top:1rem;">
+                  <h3 class="font-headline-md">Environment File Imported</h3>
+                  <p class="font-body-sm">${escapePreview(filename)} was saved as a complete versioned file.</p>
+                  <p class="font-body-sm">Commit: ${escapePreview(message)}</p>
+                </div>`;
+            } catch (error) {
+              confirmButton.disabled = false;
+              confirmButton.textContent = 'Confirm and Import File';
+              window.showToast?.('File Import Failed', error.message, 'error');
+            }
+          });
+        } catch (error) {
+          window.showToast?.('File Preview Failed', error.message, 'error');
+        } finally {
+          button.disabled = false;
+          button.querySelector('span').textContent = 'Preview Import';
         }
+
         return;
       }
 

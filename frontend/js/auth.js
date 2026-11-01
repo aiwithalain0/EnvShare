@@ -1,4 +1,4 @@
-ï»¿/**
+/**
  * EnvShare Authentication Views & Logic
  * Aligned with the EnvShare authentication UI.
  *
@@ -100,7 +100,7 @@ export function renderLoginView(container) {
             <div class="form-group" style="display:flex;flex-direction:column;gap:6px;">
               <label for="login-password" class="form-label" style="font-size:12px;font-weight:500;color:var(--color-text-secondary);">Password</label>
               <div style="position:relative;display:flex;align-items:center;">
-                <input id="login-password" name="password" type="password" class="input-control font-mono" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password" required style="height:40px;border-radius:var(--radius-md);padding-left:14px;padding-right:40px;font-size:14px;width:100%;">
+                <input id="login-password" name="password" type="password" class="input-control font-mono" placeholder="••••••••••••" autocomplete="current-password" required style="height:40px;border-radius:var(--radius-md);padding-left:14px;padding-right:40px;font-size:14px;width:100%;">
                 <button id="login-toggle-password" type="button" class="btn-icon" aria-label="Toggle password visibility" style="position:absolute;right:4px;width:32px;height:32px;border:none;background:transparent;color:var(--color-text-secondary);cursor:pointer;">
                   <span class="material-symbols-outlined" style="font-size:18px;">visibility</span>
                 </button>
@@ -124,20 +124,22 @@ export function renderLoginView(container) {
 
           <div class="auth-sso-divider"><span>OR CONTINUE WITH</span></div>
 
-          <div class="auth-sso-grid">
-            <button class="auth-sso-btn" type="button" onclick="alert('Direct SSO is managed via your enterprise SAML/OAuth policy. Use email and password to log in.');">
+
+            <div class="auth-sso-grid"><button class="auth-sso-btn" type="button">
+              <svg style="width:16px;height:16px;" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.95 46.98 31.85 46.98 24.55z"/>
+                <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.89 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              <span>Google</span>
+            </button><button class="auth-sso-btn" type="button" onclick="alert('Direct SSO is managed via your enterprise SAML/OAuth policy. Use email and password to log in.');">
               <svg style="width:16px;height:16px;" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"></path>
               </svg>
               <span>GitHub</span>
-            </button>
-            <button class="auth-sso-btn" type="button" onclick="alert('Passkey hardware authentication is supported via enterprise WebAuthn.');">
-              <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-              </svg>
-              <span>Passkey</span>
-            </button>
-          </div>
+            </button></div>
+
 
           <div style="margin-top:1.5rem;text-align:center;font-size:14px;color:var(--color-text-secondary);">
             <p style="margin:0;">New to EnvShare?
@@ -148,7 +150,7 @@ export function renderLoginView(container) {
       </main>
 
       <footer class="auth-footer-bar">
-        <div><span>Â© 2025 EnvShare Inc.</span></div>
+        <div><span>© 2025 EnvShare Inc.</span></div>
         <div style="display:flex;align-items:center;gap:1rem;color:var(--color-text-secondary);">
           <a href="#settings" style="color:inherit;text-decoration:none;">Status</a>
           <a href="#settings" style="color:inherit;text-decoration:none;">Security</a>
@@ -293,9 +295,9 @@ export function renderRegisterView(container) {
                   </div>
                 </div>
                 <ul class="requirements-list" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--color-text-secondary);">
-                  <li id="req-length" class="req-item" style="display:flex;align-items:center;gap:6px;"><span class="req-icon">â—‹</span> At least 12 characters</li>
-                  <li id="req-letter" class="req-item" style="display:flex;align-items:center;gap:6px;"><span class="req-icon">â—‹</span> At least one letter</li>
-                  <li id="req-number" class="req-item" style="display:flex;align-items:center;gap:6px;"><span class="req-icon">â—‹</span> At least one number</li>
+                  <li id="req-length" class="req-item" style="display:flex;align-items:center;gap:6px;"><span class="req-icon">?</span> At least 12 characters</li>
+                  <li id="req-letter" class="req-item" style="display:flex;align-items:center;gap:6px;"><span class="req-icon">?</span> At least one letter</li>
+                  <li id="req-number" class="req-item" style="display:flex;align-items:center;gap:6px;"><span class="req-icon">?</span> At least one number</li>
                 </ul>
               </div>
             </div>
@@ -319,20 +321,22 @@ export function renderRegisterView(container) {
 
           <div class="auth-sso-divider"><span>OR CONTINUE WITH</span></div>
 
-          <div class="auth-sso-grid">
-            <button class="auth-sso-btn" type="button" onclick="alert('Direct SSO is managed via your enterprise SAML/OAuth policy. Use email and password to register.');">
+
+            <div class="auth-sso-grid"><button class="auth-sso-btn" type="button">
+              <svg style="width:16px;height:16px;" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.95 46.98 31.85 46.98 24.55z"/>
+                <path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.76-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.52 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.45-4.89 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              <span>Google</span>
+            </button><button class="auth-sso-btn" type="button" onclick="alert('Direct SSO is managed via your enterprise SAML/OAuth policy. Use email and password to register.');">
               <svg style="width:16px;height:16px;" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"></path>
               </svg>
               <span>GitHub</span>
-            </button>
-            <button class="auth-sso-btn" type="button" onclick="alert('Passkey hardware authentication is supported via enterprise WebAuthn.');">
-              <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-              </svg>
-              <span>Passkey</span>
-            </button>
-          </div>
+            </button></div>
+
 
           <div style="margin-top:1.5rem;text-align:center;font-size:14px;color:var(--color-text-secondary);">
             <p style="margin:0;">Already have an account?
@@ -343,7 +347,7 @@ export function renderRegisterView(container) {
       </main>
 
       <footer class="auth-footer-bar">
-        <div><span>Â© 2025 EnvShare Inc.</span></div>
+        <div><span>© 2025 EnvShare Inc.</span></div>
         <div style="display:flex;align-items:center;gap:1rem;color:var(--color-text-secondary);">
           <a href="#settings" style="color:inherit;text-decoration:none;">Status</a>
           <a href="#settings" style="color:inherit;text-decoration:none;">Security</a>
@@ -389,11 +393,11 @@ export function renderRegisterView(container) {
     if (isValid) {
       element.classList.add('is-valid');
       element.style.color = '#10B981';
-      element.querySelector('.req-icon').textContent = 'âœ“';
+      element.querySelector('.req-icon').textContent = '?';
     } else {
       element.classList.remove('is-valid');
       element.style.color = 'var(--color-text-secondary)';
-      element.querySelector('.req-icon').textContent = 'â—‹';
+      element.querySelector('.req-icon').textContent = '?';
     }
   }
 

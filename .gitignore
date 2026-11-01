@@ -1,4 +1,4 @@
-﻿# Secrets and environment files
+# Secrets and environment files
 .env
 .env.*
 !.env.example
@@ -47,7 +47,7 @@ Thumbs.db
 *step3-backup
 
 
-# Local AI agent configuration
+# Local development tool configuration
 /.agent/
 /.agents/
 /.gemini/

@@ -466,4 +466,46 @@ export async function restoreEnvironmentFile(
   );
 }
 
+export async function previewEnvironmentFile(
+  projectId,
+  environmentId,
+  content
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/preview`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }
+  );
+}
+
+export async function copyEnvironmentFile(
+  projectId,
+  environmentId,
+  fileId,
+  versionNumber = null
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/copy`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ version_number: versionNumber }),
+    }
+  );
+}
+
+export async function restoreEnvironmentFileVersion(
+  projectId,
+  environmentId,
+  fileId,
+  versionNumber
+) {
+  return apiRequest(
+    `${environmentFilesEndpoint(projectId, environmentId)}/${fileId}/versions/${versionNumber}/restore`,
+    {
+      method: 'POST',
+    }
+  );
+}
 

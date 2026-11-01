@@ -1,3 +1,4 @@
+
 import {
   listEnvironmentFiles,
   getEnvironmentFileContent,
@@ -9,6 +10,8 @@ import {
   renameEnvironmentFile,
   deleteEnvironmentFile,
   restoreEnvironmentFile,
+  copyEnvironmentFile,
+  restoreEnvironmentFileVersion,
 } from '../api.js';
 
 export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
@@ -25,6 +28,81 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
     })[char]);
 
   const envId = () => getEnvironmentId();
+
+  // Render GitHub-style unified diff with safe HTML escaping.
+  function renderEnvironmentDiff(diffLines) {
+    let oldLine = 0;
+    let newLine = 0;
+
+    if (!diffLines || diffLines.length === 0) {
+      return '<div class="env-diff-empty">No differences found.</div>';
+    }
+
+    const lines = diffLines.map((line) => {
+      if (line.startsWith('@@')) {
+        const match = line.match(
+          /@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/
+        );
+
+        if (match) {
+          oldLine = Number(match[1]);
+          newLine = Number(match[3]);
+        }
+
+        return `
+          <div class="env-diff-hunk">
+            ${escapeHtml(line)}
+          </div>
+        `;
+      }
+
+      if (line.startsWith('---') || line.startsWith('+++')) {
+        return `
+          <div class="env-diff-header">
+            ${escapeHtml(line)}
+          </div>
+        `;
+      }
+
+      let type = 'context';
+      let oldNumber = '';
+      let newNumber = '';
+
+      if (line.startsWith('+')) {
+        type = 'added';
+        newNumber = newLine++;
+      } else if (line.startsWith('-')) {
+        type = 'deleted';
+        oldNumber = oldLine++;
+      } else {
+        oldNumber = oldLine++;
+        newNumber = newLine++;
+      }
+
+      const content = line.startsWith('+') || line.startsWith('-')
+        ? line.slice(1)
+        : line.startsWith(' ')
+          ? line.slice(1)
+          : line;
+
+      const sign = type === 'added'
+        ? '+'
+        : type === 'deleted'
+          ? '-'
+          : ' ';
+
+      return `
+        <div class="env-diff-line env-diff-${type}">
+          <span class="env-diff-number">${oldNumber}</span>
+          <span class="env-diff-number">${newNumber}</span>
+          <span class="env-diff-sign">${sign}</span>
+          <span class="env-diff-content">${escapeHtml(content)}</span>
+        </div>
+      `;
+    }).join('');
+
+    return `<div class="env-diff-view">${lines}</div>`;
+  }
 
   container.innerHTML = `
     <section style="border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;margin:12px 0">
@@ -93,9 +171,10 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
           <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--color-border);flex-wrap:wrap">
             <div style="min-width:0">
               <div style="font-family:monospace;font-size:13px;font-weight:600;overflow-wrap:anywhere">${escapeHtml(file.filename)}</div>
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Version ${file.version_number} · Updated ${escapeHtml(file.updated_at || '')}</div>
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-top:4px">Version ${file.version_number} Â· Updated ${escapeHtml(file.updated_at || '')}</div>
             </div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn btn-secondary" data-action="copy" data-id="${file.id}" type="button">Copy</button>
               <button class="btn btn-secondary" data-action="edit" data-id="${file.id}" type="button">Edit</button>
               <button class="btn btn-secondary" data-action="history" data-id="${file.id}" data-name="${escapeHtml(file.filename)}" type="button">History</button>
               <button class="btn btn-ghost" data-action="rename" data-id="${file.id}" type="button">Rename</button>
@@ -112,6 +191,7 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
         const file = files.find((item) => item.id === id);
         if (!file) return;
 
+        if (button.dataset.action === 'copy') copyFile(file);
         if (button.dataset.action === 'edit') openEditorForExisting(file);
         if (button.dataset.action === 'history') openHistory(file);
         if (button.dataset.action === 'rename') renameFile(file);
@@ -167,6 +247,34 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
     });
   }
 
+  async function copyFile(file, versionNumber = null) {
+    try {
+      const result = await copyEnvironmentFile(
+        projectId,
+        envId(),
+        file.id,
+        versionNumber
+      );
+
+      let content = result.content;
+
+      if (typeof content !== 'string') {
+        throw new Error('The server returned invalid file content.');
+      }
+
+      await navigator.clipboard.writeText(content);
+      content = null;
+
+      window.showToast?.(
+        'File Copied',
+        `${file.filename} was copied with its original values.`,
+        'success'
+      );
+    } catch (error) {
+      window.showToast?.('Copy Failed', error.message, 'error');
+    }
+  }
+
   async function openEditorForExisting(file) {
     try {
       const result = await getEnvironmentFileContent(projectId, envId(), file.id);
@@ -207,6 +315,7 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
       }
 
       button.disabled = true;
+
       try {
         await createEnvironmentFileCommit(
           projectId,
@@ -214,6 +323,7 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
           message,
           Array.from(staged.values())
         );
+
         staged.clear();
         updateStagedUI();
         window.closeGlobalModal();
@@ -248,34 +358,53 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
         <div style="display:flex;flex-direction:column;gap:8px">
           ${history.map((version) => `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid var(--color-border);padding:8px 0;flex-wrap:wrap">
-              <span>Version ${version.version_number} · ${escapeHtml(version.created_at || '')}</span>
+              <span>Version ${version.version_number} Â· ${escapeHtml(version.created_at || '')}</span>
               <div style="display:flex;gap:6px">
                 <button class="btn btn-secondary" data-version="${version.version_number}" data-action="view">View</button>
+                <button class="btn btn-secondary" data-version="${version.version_number}" data-action="copy">Copy</button>
                 <button class="btn btn-secondary" data-version="${version.version_number}" data-action="restore">Restore</button>
               </div>
             </div>
           `).join('')}
         </div>
+
         <div style="margin-top:14px;border-top:1px solid var(--color-border);padding-top:12px">
           <div style="font-weight:600;margin-bottom:8px">Compare versions</div>
-          <div style="display:flex;gap:8px">
-            <select id="env-file-from-version" class="input-control">${history.map(v => `<option value="${v.version_number}">${v.version_number}</option>`).join('')}</select>
-            <select id="env-file-to-version" class="input-control">${history.map(v => `<option value="${v.version_number}" ${v.version_number === history[0].version_number ? 'selected' : ''}>${v.version_number}</option>`).join('')}</select>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="env-file-from-version" class="input-control">
+              ${history.map(v => `<option value="${v.version_number}">${v.version_number}</option>`).join('')}
+            </select>
+
+            <select id="env-file-to-version" class="input-control">
+              ${history.map(v => `<option value="${v.version_number}" ${v.version_number === history[0].version_number ? 'selected' : ''}>${v.version_number}</option>`).join('')}
+            </select>
+
             <button id="env-file-compare" class="btn btn-secondary" type="button">Compare</button>
           </div>
-          <pre id="env-file-diff" style="white-space:pre-wrap;overflow:auto;max-height:55vh;min-height:300px;width:100%;margin-top:10px;font-size:12px"></pre>
+
+          <div id="env-file-diff" class="env-diff-container" style="margin-top:12px">
+            <div class="env-diff-empty">Select two versions and click Compare.</div>
+          </div>
         </div>
       `;
 
       body.querySelectorAll('[data-action="view"]').forEach((button) => {
         button.addEventListener('click', async () => {
           try {
-            const version = await getEnvironmentFileVersion(projectId, envId(), file.id, Number(button.dataset.version));
+            const version = await getEnvironmentFileVersion(
+              projectId,
+              envId(),
+              file.id,
+              Number(button.dataset.version)
+            );
+
             window.openGlobalModal({
-              title: `${file.filename} · Version ${version.version_number}`,
+              title: `${file.filename} Â· Version ${version.version_number}`,
               bodyHtml: '<textarea id="env-file-version-content" class="input-control font-mono" readonly style="min-height:360px;white-space:pre;overflow:auto"></textarea>',
               footerHtml: '<button class="btn btn-secondary" type="button" onclick="window.closeGlobalModal()">Close</button>',
             });
+
             document.getElementById('env-file-version-content').value = version.content;
           } catch (error) {
             window.showToast?.('Unable to Load Version', error.message, 'error');
@@ -283,13 +412,24 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
         });
       });
 
+      body.querySelectorAll('[data-action="copy"]').forEach((button) => {
+        button.addEventListener('click', () => {
+          copyFile(file, Number(button.dataset.version));
+        });
+      });
+
       body.querySelectorAll('[data-action="restore"]').forEach((button) => {
         button.addEventListener('click', async () => {
           try {
-            const version = await getEnvironmentFileVersion(projectId, envId(), file.id, Number(button.dataset.version));
-            await createEnvironmentFileCommit(projectId, envId(), `Restore ${file.filename} to version ${version.version_number}`, [
-              { filename: file.filename, content: version.content },
-            ]);
+            const versionNumber = Number(button.dataset.version);
+
+            await restoreEnvironmentFileVersion(
+              projectId,
+              envId(),
+              file.id,
+              versionNumber
+            );
+
             window.closeGlobalModal();
             window.showToast?.('Version Restored', `Created a new version from version ${version.version_number}.`, 'success');
             await load();
@@ -303,12 +443,25 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
         const from = Number(document.getElementById('env-file-from-version').value);
         const to = Number(document.getElementById('env-file-to-version').value);
         const diffElement = document.getElementById('env-file-diff');
+        const compareButton = document.getElementById('env-file-compare');
+
+        compareButton.disabled = true;
+        diffElement.innerHTML = '<div class="env-diff-empty">Comparing versions...</div>';
 
         try {
-          const result = await compareEnvironmentFileVersions(projectId, envId(), file.id, from, to);
-          diffElement.textContent = result.diff.join('\n');
+          const result = await compareEnvironmentFileVersions(
+            projectId,
+            envId(),
+            file.id,
+            from,
+            to
+          );
+
+          diffElement.innerHTML = renderEnvironmentDiff(result.diff);
         } catch (error) {
           diffElement.textContent = error.message;
+        } finally {
+          compareButton.disabled = false;
         }
       });
     } catch (error) {
@@ -375,7 +528,12 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
       body.querySelectorAll('[data-restore-id]').forEach((button) => {
         button.addEventListener('click', async () => {
           try {
-            await restoreEnvironmentFile(projectId, envId(), Number(button.dataset.restoreId));
+            await restoreEnvironmentFile(
+              projectId,
+              envId(),
+              Number(button.dataset.restoreId)
+            );
+
             window.closeGlobalModal();
             window.showToast?.('File Restored', 'The deleted file was restored.', 'success');
             await load();
@@ -397,5 +555,3 @@ export function mountEnvironmentFiles(container, projectId, getEnvironmentId) {
 
   return { reload: load };
 }
-
-

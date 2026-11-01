@@ -88,3 +88,73 @@ def parse_env_file(content: str) -> dict:
         "variables": variables,
         "errors": errors,
     }
+
+SENSITIVE_KEY_PATTERNS = [
+    re.compile(pattern, re.IGNORECASE)
+    for pattern in [
+        r"(^|_)(API_KEY|API_TOKEN|API_SECRET|SECRET_KEY|CLIENT_SECRET)($|_)",
+        r"(^|_)(AUTH_TOKEN|ACCESS_TOKEN|REFRESH_TOKEN|OAUTH_TOKEN)($|_)",
+        r"(^|_)(PASSWORD|PASSWD|DB_PASSWORD)($|_)",
+        r"(^|_)(DATABASE_URL|DATABASE_URI|DB_URI)($|_)",
+        r"(^|_)(ENCRYPTION_KEY|PRIVATE_KEY|SSH_PRIVATE_KEY)($|_)",
+        r"(^|_)(AWS_SECRET_ACCESS_KEY|GCP_PRIVATE_KEY)($|_)",
+        r"(^|_)(STRIPE_SECRET_KEY|PAYMENT_SECRET)($|_)",
+    ]
+]
+
+SENSITIVE_VALUE_PATTERNS = [
+    re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", re.IGNORECASE),
+    re.compile(r"://[^/\s:@]+:[^@\s]+@"),
+    re.compile(r"\beyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b"),
+]
+
+
+def is_sensitive_variable(key: str, value: str = "") -> bool:
+    """Detect sensitive variables by key name or recognizable secret format."""
+    normalized_key = key.strip()
+
+    if any(pattern.search(normalized_key) for pattern in SENSITIVE_KEY_PATTERNS):
+        return True
+
+    return any(pattern.search(value or "") for pattern in SENSITIVE_VALUE_PATTERNS)
+
+
+def mask_env_content(content: str, replacement: str = "********") -> str:
+    """Mask sensitive values for normal viewing without changing stored content."""
+    masked_lines = []
+
+    for raw_line in content.splitlines(keepends=True):
+        line = raw_line.rstrip("\r\n")
+        line_ending = raw_line[len(line):]
+
+        stripped = line.lstrip()
+
+        if not stripped or stripped.startswith("#"):
+            masked_lines.append(raw_line)
+            continue
+
+        prefix = line[:len(line) - len(stripped)]
+        candidate = stripped
+
+        if candidate.startswith("export "):
+            prefix += "export "
+            candidate = candidate[len("export "):]
+
+        if "=" not in candidate:
+            masked_lines.append(raw_line)
+            continue
+
+        key, value = candidate.split("=", maxsplit=1)
+
+        if not is_sensitive_variable(key, value):
+            masked_lines.append(raw_line)
+            continue
+
+        quote = value[0] if value and value[0] in ("'", '"') else ""
+        closing_quote = quote if quote and value.endswith(quote) else ""
+
+        masked_lines.append(
+            prefix + key + "=" + quote + replacement + closing_quote + line_ending
+        )
+
+    return "".join(masked_lines)

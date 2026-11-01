@@ -132,7 +132,16 @@ def test_file_content_is_preserved_exactly(client):
     )
 
     assert response.status_code == 200
-    assert response.json()["content"] == original_content
+    displayed_content = response.json()["content"]
+    assert displayed_content == (
+        "# Application settings\n"
+        "\n"
+        "API_KEY=********\n"
+        "DATABASE_URL=********\n"
+        "DEBUG=true\n"
+    )
+    assert "test123" not in displayed_content
+    assert "postgres://localhost/db" not in displayed_content
 
 
 def test_file_versions_are_created(client):
@@ -309,6 +318,121 @@ def test_compare_file_versions(client):
     assert response.status_code == 200
     assert any("-KEY=old" in line for line in response.json()["diff"])
     assert any("+KEY=new" in line for line in response.json()["diff"])
+
+
+def test_copy_environment_file_returns_original_latest_and_historical_content(client):
+    from models import AuditEvent
+
+    project_id, environment_id = create_test_environment(client)
+
+    first_content = "API_KEY=old-secret\nDEBUG=false\n"
+    latest_content = "API_KEY=new-secret\nDEBUG=true\n"
+
+    first = commit_files(
+        client, project_id, environment_id,
+        [{"filename": ".env", "content": first_content}],
+        "Initial version",
+    )
+    file_id = first.json()["changed_files"][0]["file_id"]
+
+    commit_files(
+        client, project_id, environment_id,
+        [{"filename": ".env", "content": latest_content}],
+        "Updated version",
+    )
+
+    base_url = (
+        f"/projects/{project_id}/environments/{environment_id}"
+        f"/files/{file_id}/copy"
+    )
+
+    latest_response = client.post(base_url, json={})
+    assert latest_response.status_code == 200
+    assert latest_response.json()["content"] == latest_content
+    assert latest_response.json()["version_number"] == 2
+
+    historical_response = client.post(
+        base_url,
+        json={"version_number": 1},
+    )
+    assert historical_response.status_code == 200
+    assert historical_response.json()["content"] == first_content
+    assert historical_response.json()["version_number"] == 1
+
+    normal_view = client.get(
+        f"/projects/{project_id}/environments/{environment_id}"
+        f"/files/{file_id}/content"
+    )
+    assert normal_view.status_code == 200
+    assert "new-secret" not in normal_view.json()["content"]
+    assert "API_KEY=********" in normal_view.json()["content"]
+
+    db = next(app.dependency_overrides[get_db]())
+    try:
+        events = db.scalars(
+            select(AuditEvent).where(
+                AuditEvent.action == "environment_file.copied"
+            )
+        ).all()
+
+        assert len(events) == 2
+
+        for event in events:
+            metadata = str(event.event_metadata)
+            assert "old-secret" not in metadata
+            assert "new-secret" not in metadata
+            assert event.event_metadata["filename"] == ".env"
+    finally:
+        db.close()
+
+
+def test_restore_historical_file_version_creates_new_encrypted_version(client):
+    project_id, environment_id = create_test_environment(client)
+
+    original_content = "API_KEY=original-secret\nDEBUG=false\n"
+    newer_content = "API_KEY=newer-secret\nDEBUG=true\n"
+
+    first = commit_files(
+        client, project_id, environment_id,
+        [{"filename": ".env", "content": original_content}],
+        "Initial version",
+    )
+    file_id = first.json()["changed_files"][0]["file_id"]
+
+    commit_files(
+        client, project_id, environment_id,
+        [{"filename": ".env", "content": newer_content}],
+        "Second version",
+    )
+
+    restore_url = (
+        f"/projects/{project_id}/environments/{environment_id}"
+        f"/files/{file_id}/versions/1/restore"
+    )
+    response = client.post(restore_url)
+
+    assert response.status_code == 200
+    assert response.json()["source_version_number"] == 1
+    assert response.json()["version_number"] == 3
+
+    copy_url = (
+        f"/projects/{project_id}/environments/{environment_id}"
+        f"/files/{file_id}/copy"
+    )
+    copied = client.post(copy_url, json={})
+
+    assert copied.status_code == 200
+    assert copied.json()["version_number"] == 3
+    assert copied.json()["content"] == original_content
+
+    history_url = (
+        f"/projects/{project_id}/environments/{environment_id}"
+        f"/files/{file_id}/history"
+    )
+    history = client.get(history_url)
+
+    assert history.status_code == 200
+    assert [item["version_number"] for item in history.json()] == [3, 2, 1]
 
 
 def test_rename_environment_file(client):
@@ -495,3 +619,88 @@ def test_project_deletion_removes_file_version_records(client):
         assert db.scalars(select(CommitFile)).all() == []
     finally:
         db.close()
+
+
+def test_file_import_preview_masks_sensitive_values(client):
+    project_id, environment_id = create_test_environment(client)
+
+    secret = "real-secret-value-123"
+    response = client.post(
+        f"/projects/{project_id}/environments/{environment_id}/files/preview",
+        json={
+            "content": (
+                "APP_NAME=EnvShare\n"
+                f"API_KEY={secret}\n"
+                "DEBUG=true\n"
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["valid"] is True
+    assert data["variable_count"] == 3
+    assert data["sensitive_count"] == 1
+    assert data["variables"] == [
+        {"key": "APP_NAME", "value": "EnvShare", "sensitive": False},
+        {"key": "API_KEY", "value": "********", "sensitive": True},
+        {"key": "DEBUG", "value": "true", "sensitive": False},
+    ]
+    assert secret not in response.text
+
+
+def test_file_import_preview_reports_invalid_lines_and_duplicates(client):
+    project_id, environment_id = create_test_environment(client)
+
+    response = client.post(
+        f"/projects/{project_id}/environments/{environment_id}/files/preview",
+        json={
+            "content": (
+                "APP_NAME=EnvShare\n"
+                "APP_NAME=Duplicate\n"
+                "INVALID LINE\n"
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["valid"] is False
+    assert len(data["errors"]) == 2
+    assert any("duplicate" in error.lower() for error in data["errors"])
+    assert any("expected KEY=VALUE" in error for error in data["errors"])
+
+
+
+def test_compare_detects_sensitive_value_changes_without_exposing_secrets(client):
+    project_id, environment_id = create_test_environment(client)
+
+    first = commit_files(
+        client, project_id, environment_id,
+        [{"filename": ".env", "content": "API_KEY=old-secret-value\\nDEBUG=false\\n"}],
+        "Initial secret",
+    )
+    file_id = first.json()["changed_files"][0]["file_id"]
+
+    commit_files(
+        client, project_id, environment_id,
+        [{"filename": ".env", "content": "API_KEY=new-secret-value\\nDEBUG=false\\n"}],
+        "Updated secret",
+    )
+
+    response = client.get(
+        f"/projects/{project_id}/environments/{environment_id}/files/{file_id}/compare",
+        params={"from_version": 1, "to_version": 2},
+    )
+
+    assert response.status_code == 200
+    diff = response.json()["diff"]
+
+    assert any(line.startswith("-API_KEY=********") for line in diff)
+    assert any(line.startswith("+API_KEY=********") for line in diff)
+
+    joined_diff = "\\n".join(diff)
+    assert "old-secret-value" not in joined_diff
+    assert "new-secret-value" not in joined_diff

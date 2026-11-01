@@ -102,10 +102,6 @@ export async function renderVariablesView(container) {
             <span class="material-symbols-outlined">key</span>
             <span>Invite Code</span>
           </button>
-          <button id="var-add-btn" class="btn btn-primary" type="button">
-            <span class="material-symbols-outlined">add</span>
-            <span>Add Variable</span>
-          </button>
         </div>
       </div>
     </div>
@@ -116,57 +112,6 @@ export async function renderVariablesView(container) {
 
     <div id="environment-files-panel"></div>
 
-    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);padding-top:4px">
-      <div style="position:relative;width:100%;max-width:380px">
-        <span class="material-symbols-outlined" style="position:absolute;left:10px;top:9px;font-size:17px;color:var(--color-text-muted)">search</span>
-        <input id="var-search-input" type="text" class="input-control" placeholder="Search variables..." style="padding-left:34px;height:34px;font-size:13px">
-      </div>
-      <div style="font-size:12px;color:var(--color-text-secondary)">
-        <strong id="var-count-header">0</strong> variables
-      </div>
-    </div>
-
-    <div class="table-surface-card">
-      <div class="table-wrapper data-table-desktop">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width:28%">Variable Key</th>
-              <th style="width:38%">Value</th>
-              <th style="width:14%">History</th>
-              <th style="width:14%">Updated</th>
-              <th style="text-align:right;width:6%">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="var-table-body">
-            <tr><td colspan="5" style="text-align:center;padding:var(--space-xl)">Loading variables...</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="mobile-card-list" id="var-mobile-card-list"></div>
-      <div style="padding:10px var(--space-lg);border-top:1px solid var(--color-border);display:flex;justify-content:space-between;font-size:12px;color:var(--color-text-secondary)">
-        <span id="var-count-footer">Showing 0 variables</span>
-      </div>
-    </div>
-
-    <div class="cli-helper-box">
-      <div class="cli-helper-left">
-        <div class="cli-icon-box"><span class="material-symbols-outlined">terminal</span></div>
-        <div>
-          <strong>Runtime Injection</strong>
-          <p class="font-body-sm" style="color:var(--color-text-secondary);margin-top:1px">
-            Inject variables into your application process without saving unencrypted secrets to disk.
-          </p>
-        </div>
-      </div>
-      <div class="cli-code-pill">
-        <code class="cli-code-text" id="cli-cmd-snippet">envshare run --env=development npm start</code>
-        <button id="cli-copy-btn" class="btn btn-ghost btn-sm" type="button">
-          <span class="material-symbols-outlined">content_copy</span>
-          <span id="cli-copy-label">Copy</span>
-        </button>
-      </div>
-    </div>
   `;
 
   const searchInput = document.getElementById('var-search-input');

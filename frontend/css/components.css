@@ -1118,7 +1118,7 @@ textarea.input-control {
 .auth-sso-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 0.625rem;
+  gap: 24px;
 }
 
 .auth-sso-btn {
@@ -1245,4 +1245,87 @@ textarea.input-control {
     width: 96vw;
     max-height: 94vh;
   }
+}
+
+/* GitHub-style environment file diff */
+.env-diff-container {
+  width: 100%;
+  max-height: 55vh;
+  min-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-container-lowest);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.env-diff-view {
+  min-width: max-content;
+}
+
+.env-diff-line {
+  display: flex;
+  min-height: 22px;
+  white-space: pre;
+}
+
+.env-diff-number {
+  flex: 0 0 42px;
+  padding: 0 8px;
+  text-align: right;
+  color: var(--color-text-secondary);
+  user-select: none;
+  border-right: 1px solid var(--color-border);
+}
+
+.env-diff-sign {
+  flex: 0 0 24px;
+  padding: 0 5px;
+  text-align: center;
+  user-select: none;
+}
+
+.env-diff-content {
+  padding-right: 16px;
+}
+
+.env-diff-added {
+  background: rgba(46, 160, 67, 0.16);
+}
+
+.env-diff-added .env-diff-sign {
+  color: #2da44e;
+  font-weight: 700;
+}
+
+.env-diff-deleted {
+  background: rgba(248, 81, 73, 0.16);
+}
+
+.env-diff-deleted .env-diff-sign {
+  color: #f85149;
+  font-weight: 700;
+}
+
+.env-diff-hunk {
+  padding: 4px 12px;
+  color: var(--color-text-secondary);
+  background: rgba(56, 139, 253, 0.12);
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  white-space: pre;
+}
+
+.env-diff-header {
+  padding: 3px 12px;
+  color: var(--color-text-secondary);
+  background: rgba(127, 127, 127, 0.08);
+  white-space: pre;
+}
+
+.env-diff-empty {
+  padding: 16px;
+  color: var(--color-text-secondary);
 }
