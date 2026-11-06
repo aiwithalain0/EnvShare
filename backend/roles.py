@@ -55,8 +55,12 @@ ROLES_READ: frozenset[str] = frozenset({
     ROLE_OWNER, ROLE_ADMIN, ROLE_MANAGER, ROLE_MEMBER,
 })
 
-# Reveal / copy a variable value.
-ROLES_REVEAL: frozenset[str] = ROLES_READ
+
+ROLES_REVEAL: frozenset[str] = frozenset({
+    ROLE_OWNER,
+    ROLE_ADMIN,
+    ROLE_MANAGER,
+})
 
 # Create, update, and import variables and environments. Deletion is admin-only.
 ROLES_WRITE: frozenset[str] = frozenset({

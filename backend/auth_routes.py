@@ -20,7 +20,12 @@ from models import RefreshSession, User
 from schemas import TokenResponse, UserLogin, UserRegister, UserResponse
 from security import hash_password, verify_password
 
+from dependencies import get_current_user
+
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+@router.get("/me", response_model=UserResponse)
+def get_current_user_profile(current_user: User = Depends(get_current_user)):
+    return current_user
 
 REFRESH_COOKIE_NAME = "envshare_refresh_token"
 REFRESH_COOKIE_SECURE = (

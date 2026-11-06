@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from models import EnvironmentSnapshot
 
 from database import get_db
 from file_models import CommitFile, EnvironmentFile, FileCommit, FileVersion
@@ -509,6 +510,7 @@ def delete_environment(
     environment_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
+
 ):
     require_project_role(project_id, current_user.id, db, allowed_roles=ROLES_ADMIN)
 
@@ -600,3 +602,5 @@ def delete_environment(
         )
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+

@@ -1,6 +1,10 @@
 ﻿
 import { store } from './store.js';
 
+export async function getCurrentUser() {
+  return apiRequest('/auth/me');
+}
+
 const configuredApiUrl = window.ENVSHARE_API_URL;
 
 const isLocalDevelopment = ['localhost', '127.0.0.1'].includes(

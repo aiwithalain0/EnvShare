@@ -234,11 +234,10 @@ class RefreshSession(Base):
     __tablename__ = "refresh_sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
+    environment_id: Mapped[int] = mapped_column(
+    ForeignKey("environments.id", ondelete="CASCADE"), nullable=False, index=True
+)
+    
     token_hash: Mapped[str] = mapped_column(
         String(64), unique=True, nullable=False, index=True
     )

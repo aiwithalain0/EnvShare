@@ -204,6 +204,7 @@
     import {
       checkBackendHealth,
       refreshAccessToken,
+      getCurrentUser,
       logoutUser,
       listProjects,
       createProject,
@@ -256,13 +257,17 @@
       toast.innerHTML = `
         <div class="toast-icon">${icons[type] || icons.info}</div>
         <div class="toast-content">
-          <div class="toast-title">${title}</div>
-          <div class="toast-message">${message}</div>
+          <div class="toast-title"></div>
+          <div class="toast-message"></div>
         </div>
         <button class="toast-close" type="button" aria-label="Dismiss notification">
           <span class="material-symbols-outlined" style="font-size: 16px;">close</span>
         </button>
       `;
+
+      // Safely set text content without evaluating HTML
+      toast.querySelector('.toast-title').textContent = title;
+      toast.querySelector('.toast-message').textContent = message;
 
       const closeBtn = toast.querySelector('.toast-close');
       const dismiss = () => {
@@ -706,10 +711,13 @@
     });
 
     // 9. Startup Initialization and Backend Verification
+    // 9. Startup Initialization and Backend Verification
     async function initApp() {
       try {
-        const response = await refreshAccessToken();
-        store.setAuth(response.access_token, null);
+        const tokenResp = await refreshAccessToken();
+        store.setAuth(tokenResp.access_token, null);
+        const user = await getCurrentUser();
+        store.setAuth(tokenResp.access_token, user);
       } catch (err) {
         store.clearAuth();
       }
@@ -728,4 +736,3 @@
 </body>
 
 </html>
-

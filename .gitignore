@@ -1,59 +1,8 @@
-# Secrets and environment files
+.venv/
+venv/
 .env
-.env.*
-!.env.example
-**/.env
-**/.env.*
-!**/.env.example
-
-# Python environments and generated files
-**/.venv/
-**/venv/
-**/__pycache__/
-*.py[cod]
-**/.pytest_cache/
-
-# Local databases
-**/envshare.db
-*.sqlite
+__pycache__/
+*.log
 *.sqlite3
 
-# Frontend dependencies and build output
-**/node_modules/
-**/.next/
-**/out/
-**/dist/
 
-# Exclude the old frontend until it is needed
-/envshare-app/
-
-# Logs and operating-system files
-*.log
-.DS_Store
-Thumbs.db
-
-# Database backups and migration copies
-*.db
-*.db-*
-*.bak
-*.backup
-*.old
-
-# Frontend backups
-/frontend_backup_*/
-
-*.rbac-backup
-
-*step3-backup
-
-
-# Local development tool configuration
-/.agent/
-/.agents/
-/.gemini/
-/.gsd/
-
-# Local exports and temporary backups
-/stitch-export/
-backend/*_before_snapshots_*.py
-backend/*.history-reveal-backup

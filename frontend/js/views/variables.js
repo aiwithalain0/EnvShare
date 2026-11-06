@@ -110,6 +110,41 @@ export async function renderVariablesView(container) {
       <div style="padding:var(--space-sm);color:var(--color-text-secondary)">Loading environments...</div>
     </div>
 
+    <!-- Toolbar: Search & Metric Counter -->
+    
+    <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-md);padding-top:4px">
+      <div style="position:relative;width:100%;max-width:380px">
+        <span class="material-symbols-outlined" style="position:absolute;left:10px;top:9px;font-size:17px;color:var(--color-text-muted)">search</span>
+        <input id="var-search-input" type="text" class="input-control" placeholder="Search variables..." style="padding-left:34px;height:34px;font-size:13px">
+      </div>
+      <div style="font-size:12px;color:var(--color-text-secondary)">
+        <strong id="var-count-header">0</strong> variables
+      </div>
+    </div>
+
+    <!-- Data Table Surface -->
+    <div class="table-surface-card">
+      <div class="table-wrapper data-table-desktop">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:28%">Variable Key</th>
+              <th style="width:38%">Value</th>
+              <th style="width:14%">History</th>
+              <th style="width:14%">Updated</th>
+              <th style="text-align:right;width:6%">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="var-table-body">
+            <tr><td colspan="5" style="text-align:center;padding:var(--space-xl)">Loading variables...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="mobile-card-list" id="var-mobile-card-list"></div>
+      <div style="padding:10px var(--space-lg);border-top:1px solid var(--color-border);display:flex;justify-content:space-between;font-size:12px;color:var(--color-text-secondary)">
+        <span id="var-count-footer">Showing 0 variables</span>
+      </div>
+    </div>
     <div id="environment-files-panel"></div>
 
   `;
